@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ModuleVersion {
+  modulePath String @map("module_path") @db.Text
+  version String @db.Text
+  observedAt String @map("observed_at") @db.Text
+
+  @@id([modulePath, version])
+  @@map("module_versions")
+}
+
+model ImportCursor {
+  source String @id @db.Text
+  offset BigInt @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("import_cursors")
+}
+
+model Module {
+  path String @id @db.Text
+  name String @db.Text
+  version String? @db.Text
+  repoUrl String? @map("repo_url") @db.Text
+  commitTime DateTime? @map("commit_time") @db.Timestamptz(6)
+  enrichedAt DateTime? @map("enriched_at") @db.Timestamptz(6)
+  lastError String? @map("last_error") @db.Text
+  packages Package[]
+
+  @@map("modules")
+}
+
+model Package {
+  path String @id @db.Text
+  modulePath String @map("module_path") @db.Text
+  name String @db.Text
+  synopsis String @db.Text
+  version String @db.Text
+  module Module @relation(fields: [modulePath], references: [path], onDelete: Cascade)
+
+  @@index([modulePath])
+  @@map("packages")
+}

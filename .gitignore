@@ -3,7 +3,12 @@
 /data/*.jsonl
 /data/*.state.json
 /data/*.tmp
+/data/*.txt
 .DS_Store
+/TODO.md
 /.svelte-kit/
 /build/
 /.output/
+/generated/
+/.svelte-kit/
+/build/

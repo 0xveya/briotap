@@ -1,0 +1,13 @@
+[Unit]
+Description=Collect Go package metadata for briotap
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/node /opt/briotap/collect-enrichment.mjs /srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,41 @@
 [tasks.db-up]
 run = 'docker compose up -d --wait postgres'
 
+[tasks.db-migrate]
+run = 'bunx --bun prisma migrate deploy'
+
 [tasks.index-download]
 run = 'bun scripts/download-index.ts'
 
+[tasks.index-import]
+run = 'bun scripts/import-index.ts'
+
+[tasks.enrich]
+run = 'bun scripts/enrich-modules.ts'
+
+[tasks.nas-seed]
+run = 'bash scripts/seed-nas.sh'
+
+[tasks.nas-prioritize]
+run = 'bash scripts/nas-prioritize.sh'
+
+[tasks.nas-pull]
+run = 'bash scripts/pull-enrichment.sh'
+
+[tasks.enrichment-import]
+run = 'bun scripts/import-enrichment.ts'
+
+[tasks.nas-sync]
+run = 'bash scripts/pull-enrichment.sh && bun scripts/import-enrichment.ts'
+
+[tasks.search]
+run = 'bun scripts/search.ts'
+
+[tasks.dev]
+run = 'bun run dev'
+
 [tasks.check]
 run = 'bun run check'
+
+[tasks.build]
+run = 'bun run build'

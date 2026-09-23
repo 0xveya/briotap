@@ -1,0 +1,8 @@
+[Unit]
+Description=Pull NAS package metadata into briotap PostgreSQL
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/veya/coding/briotap
+ExecStart=/usr/bin/mise run nas-sync
+TimeoutStartSec=infinity
