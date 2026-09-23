@@ -1,0 +1,8 @@
+[tasks.db-up]
+run = 'docker compose up -d --wait postgres'
+
+[tasks.index-download]
+run = 'bun scripts/download-index.ts'
+
+[tasks.check]
+run = 'bun run check'
