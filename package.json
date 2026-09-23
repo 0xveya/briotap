@@ -1,0 +1,13 @@
+{
+  "name": "briotap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "index:download": "bun scripts/download-index.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "typescript": "^6.0.0"
+  }
+}
