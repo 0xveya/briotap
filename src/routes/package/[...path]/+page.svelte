@@ -8,6 +8,7 @@
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import SymbolIndex from '$lib/components/SymbolIndex.svelte';
+  import DependencyList from '$lib/components/DependencyList.svelte';
   let { data }: { data: PageData } = $props();
   const pkg = $derived(data.pkg);
   const tabs = [
@@ -298,9 +299,9 @@
               Declared go.mod requirements from deps.dev, including indirect and
               test dependencies. These are separate from package imports below.
             </p>
-            {#if details.requirements}<div class="compact-list">
-              {#each details.requirements as item}<a href="/search?q={encodeURIComponent(item.name)}"><span>{item.name}{#if item.indirect}<span class="release-label">indirect</span>{/if}</span><small>{item.requirement}</small></a>{:else}<div class="notice">No module requirements reported for this version.</div>{/each}
-            </div>{:else}<div class="notice">
+            {#if details.requirements}<DependencyList
+                requirements={details.requirements}
+              />{:else}<div class="notice">
                 Module requirements are unavailable from deps.dev.
               </div>{/if}
             <div class="list-heading"><h2>Package imports</h2></div>

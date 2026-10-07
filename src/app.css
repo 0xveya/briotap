@@ -1792,6 +1792,29 @@ kbd,
 .package-path > span {
   min-width: 0;
 }
+.dependency-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0 10px;
+}
+.dependency-controls input,
+.dependency-controls select {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 13px;
+  min-height: 44px;
+}
+.dependency-controls input {
+  flex: 1;
+  min-width: 150px;
+}
+.filter-count {
+  color: var(--muted);
+  font-size: 12px;
+}
 .prose {
   max-width: 80ch;
 }
