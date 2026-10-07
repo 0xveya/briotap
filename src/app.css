@@ -1739,26 +1739,6 @@ kbd,
 .prose .heading-link:hover {
   color: var(--pink);
 }
-.snippet-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin: 22px 0 0;
-  border: 1px solid #302733;
-  border-bottom: 0;
-  background: #131116;
-  border-radius: 5px 5px 0 0;
-}
-.snippet-toolbar button {
-  border: 0;
-  padding: 8px 12px;
-  font: 11px var(--mono);
-  color: var(--muted);
-  min-height: 36px;
-}
-.prose .snippet-toolbar + pre {
-  margin-top: 0;
-  border-radius: 0 0 5px 5px;
-}
 .virtual-symbol.current {
   color: var(--pink);
   background: #ff83b30d;
@@ -1939,13 +1919,14 @@ kbd,
 .symbol-source:hover {
   color: var(--pink);
 }
-.snippet-toolbar {
-  align-items: center;
-  gap: 8px;
+
+.snippet-frame { position: relative; margin: 22px 0; }
+.prose .snippet-frame pre { margin: 0; padding-top: 52px; }
+.snippet-copy {
+  position: absolute; top: 6px; right: 6px; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 4px; background: #131116; color: var(--muted);
 }
-.prose .snippet-toolbar a {
-  padding: 8px 12px;
-  font: 11px var(--mono);
-  color: var(--muted);
-  text-decoration: none;
-}
+.snippet-copy:hover, .snippet-copy:focus-visible, .snippet-copy[aria-label="Copied"] { color: var(--pink); }
+.prose .declaration-source { display: inline-block; margin-left: 12px; font: 11px var(--mono); text-decoration: none; color: var(--muted); vertical-align: middle; }
+.prose .declaration-source:hover { color: var(--pink); }
