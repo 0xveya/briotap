@@ -42,6 +42,18 @@
       ? loadedDocumentation
       : null
   );
+  const releaseVersion = $derived(pkg.version.split('+')[0]!);
+  const versionStatus = $derived(
+    /^v\d+\.\d+\.\d+-.*\d{14}-[a-f0-9]+$/.test(releaseVersion)
+      ? 'Pseudo-version'
+      : /^v\d+\.\d+\.\d+[-]/.test(releaseVersion)
+        ? 'Prerelease'
+        : /^v[1-9]\d*\.\d+\.\d+$/.test(releaseVersion)
+          ? 'Stable release'
+          : /^v0\.\d+\.\d+$/.test(releaseVersion)
+            ? 'Tagged release · v0'
+            : 'Untagged version'
+  );
   const install = $derived(`go get ${pkg.path}@${pkg.version}`);
   const formatNumber = (value: number | undefined | null) =>
     value == null ? '—' : new Intl.NumberFormat('en').format(value);
@@ -344,8 +356,48 @@
       </div>
     </div>
     <aside class="package-sidebar" aria-label="Package insights">
+      <section class="sidebar-block package-details">
+        <h2>Details</h2>
+        <dl class="package-facts">
+          <div><dt>License</dt><dd>
+            {#if info.current?.metadata?.licenses?.length}
+              {#each info.current.metadata.licenses as license}
+                <a href="https://spdx.org/licenses/{encodeURIComponent(license)}.html" target="_blank" rel="noreferrer">{license}</a>
+              {/each}
+            {:else}{info.current ? 'Unavailable' : 'Loading…'}{/if}
+          </dd></div>
+          <div><dt>Version</dt><dd>{versionStatus}</dd></div>
+          {#if documentationData}<div><dt>Redistributable</dt><dd>{documentationData.isRedistributable ? 'Yes' : 'No'}</dd></div>{/if}
+        </dl>
+      </section>
+      {#if documentationData && (tab === 'overview' || tab === 'docs')}<section
+          class="sidebar-block doc-outline"
+        >
+          <h2>
+            Symbols <span style="color:var(--muted)"
+              >({documentationData.symbols.length})</span
+            >
+          </h2>
+          <SymbolIndex
+            symbols={documentationData.symbols}
+            sourceBase={sourceBase(pkg.path, pkg.modulePath, pkg.version)}
+          />
+        </section>{:else}<section class="sidebar-block">
+          <h2>Module packages</h2>
+          {#each pkg.packages.slice(0, 8) as item}<a
+              class="sidebar-package"
+              class:current={item.path === pkg.path}
+              href="/package/{item.path}"
+              >{item.path === pkg.modulePath
+                ? item.name
+                : item.path.replace(`${pkg.modulePath}/`, '')}</a
+            >{/each}{#if pkg.packages.length > 8}<a
+              class="sidebar-package"
+              href={tabUrl('packages')}>See all packages →</a
+            >{/if}
+        </section>{/if}
       <section class="sidebar-block">
-        <h2>PACKAGE METRICS</h2>
+        <h2>Metrics</h2>
         <div class="side-stat">
           <span>Imported by</span><strong
             >{formatNumber(info.current?.importedBy?.total)}</strong
@@ -368,7 +420,7 @@
         </div>
       </section>
       <section class="sidebar-block">
-        <h2>LINKS</h2>
+        <h2>Links</h2>
         <div class="side-links">
           {#if pkg.repoUrl}<a
               href={pkg.repoUrl}
@@ -390,32 +442,6 @@
           >
         </div>
       </section>
-      {#if documentationData && (tab === 'overview' || tab === 'docs')}<section
-          class="sidebar-block doc-outline"
-        >
-          <h2>
-            SYMBOLS <span style="color:var(--muted)"
-              >({documentationData.symbols.length})</span
-            >
-          </h2>
-          <SymbolIndex
-            symbols={documentationData.symbols}
-            sourceBase={sourceBase(pkg.path, pkg.modulePath, pkg.version)}
-          />
-        </section>{:else}<section class="sidebar-block">
-          <h2>MODULE PACKAGES</h2>
-          {#each pkg.packages.slice(0, 8) as item}<a
-              class="sidebar-package"
-              class:current={item.path === pkg.path}
-              href="/package/{item.path}"
-              >{item.path === pkg.modulePath
-                ? item.name
-                : item.path.replace(`${pkg.modulePath}/`, '')}</a
-            >{/each}{#if pkg.packages.length > 8}<a
-              class="sidebar-package"
-              href={tabUrl('packages')}>See all packages →</a
-            >{/if}
-        </section>{/if}
     </aside>
   </div>
 </div>
