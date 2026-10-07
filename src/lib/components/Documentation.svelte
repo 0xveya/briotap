@@ -103,21 +103,23 @@
   onkeydown={(event) => {
     if (
       !event.defaultPrevented &&
-      !document.querySelector('dialog[open]') &&
+      !event.repeat &&
       !event.isComposing &&
       event.key.toLowerCase() === 's' &&
       event.altKey &&
       !event.ctrlKey &&
       !event.metaKey &&
-      !(
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement ||
-        (event.target instanceof HTMLElement && event.target.isContentEditable)
-      )
+      (symbolsOpen ||
+        (!document.querySelector('dialog[open]') &&
+          !(
+            event.target instanceof HTMLInputElement ||
+            event.target instanceof HTMLTextAreaElement ||
+            event.target instanceof HTMLSelectElement ||
+            (event.target instanceof HTMLElement && event.target.isContentEditable)
+          )))
     ) {
       event.preventDefault();
-      symbolsOpen = true;
+      symbolsOpen = !symbolsOpen;
     }
     if (event.key === 'Escape' && symbolsOpen) {
       event.preventDefault();
