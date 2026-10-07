@@ -92,7 +92,7 @@
 <svelte:window
   onkeydown={(event) => {
     if (
-      event.key === 's' &&
+      event.key === 'f' &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
@@ -144,7 +144,7 @@
         <details class="reader-symbols" bind:open={symbolsOpen}>
           <summary bind:this={symbolToggle}
             >Symbols <span>{result.data.symbols.length}</span>
-            <kbd>s</kbd></summary
+            <kbd>f</kbd></summary
           >
           <div class="reader-symbol-menu" hidden={!symbolsOpen}>
             <SymbolIndex

@@ -42,8 +42,11 @@ function highlight(code: string): {
   };
 }
 
+type HighlightOptions = string | { html: string; maxLength: number };
+
 /** Highlight only snippets near the viewport; retain plain code on failure. */
-export function highlightSnippets(node: HTMLElement, _html: string) {
+export function highlightSnippets(node: HTMLElement, options: HighlightOptions) {
+  let maxLength = typeof options === 'string' ? 30_000 : Math.min(options.maxLength, 200_000);
   let active = true;
   const cancellations: (() => void)[] = [];
   const observer = new IntersectionObserver(
@@ -54,7 +57,7 @@ export function highlightSnippets(node: HTMLElement, _html: string) {
         const pre = entry.target;
         observer.unobserve(pre);
         const code = pre.textContent ?? '';
-        if (code.length > 30_000) continue;
+        if (code.length > maxLength) continue;
         const task = highlight(code);
         cancellations.push(task.cancel);
         void task.result.then((html) => {
@@ -73,7 +76,8 @@ export function highlightSnippets(node: HTMLElement, _html: string) {
   );
   for (const pre of node.querySelectorAll('pre')) observer.observe(pre);
   return {
-    update(_html: string) {
+    update(options: HighlightOptions) {
+      maxLength = typeof options === 'string' ? 30_000 : Math.min(options.maxLength, 200_000);
       for (const cancel of cancellations) cancel();
       cancellations.length = 0;
       observer.disconnect();

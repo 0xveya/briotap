@@ -2,10 +2,10 @@ import * as v from 'valibot';
 import { cached, fetchJson, pkgUrl } from './cache';
 
 const versionSchema = v.object({
-  licenses: v.optional(v.array(v.string()), []),
-  advisoryKeys: v.optional(v.array(v.object({ id: v.string() })), []),
+  licenses: v.nullish(v.array(v.string()), []),
+  advisoryKeys: v.nullish(v.array(v.object({ id: v.string() })), []),
   publishedAt: v.optional(v.string()),
-  relatedProjects: v.optional(
+  relatedProjects: v.nullish(
     v.array(v.object({ projectKey: v.object({ id: v.string() }) })),
     []
   )
@@ -24,7 +24,7 @@ const projectSchema = v.object({
   )
 });
 const importedSchema = v.object({
-  importedBy: v.object({ items: v.array(v.string()), total: v.number() })
+  importedBy: v.object({ items: v.nullish(v.array(v.string()), []), total: v.number() })
 });
 const versionsSchema = v.object({
   items: v.array(
@@ -39,8 +39,8 @@ const requirement = v.object({ name: v.string(), requirement: v.string() });
 const requirementsSchema = v.object({
   go: v.optional(
     v.object({
-      directDependencies: v.optional(v.array(requirement), []),
-      indirectDependencies: v.optional(v.array(requirement), [])
+      directDependencies: v.nullish(v.array(requirement), []),
+      indirectDependencies: v.nullish(v.array(requirement), [])
     })
   )
 });

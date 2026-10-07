@@ -3,7 +3,10 @@
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
   import type { documentation } from '$lib/server/documentation';
-  import { getDocumentation, getInsights } from '../../index.remote';
+  import { getDocumentation, getInsights, getSourceFiles, getReleases } from '../../index.remote';
+  import PackageCode from '$lib/components/PackageCode.svelte';
+  import PackageChangelog from '$lib/components/PackageChangelog.svelte';
+  import PackageStats from '$lib/components/PackageStats.svelte';
   import Documentation from '$lib/components/Documentation.svelte';
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
@@ -18,11 +21,16 @@
   const tabs = [
     'overview',
     'docs',
+    'code',
+    'changelog',
+    'timeline',
+    'stats',
     'dependencies',
     'imported-by',
     'versions',
     'packages'
   ] as const;
+  const tabBindings: Record<string, string> = { overview: 'm', docs: 'd', code: '.', changelog: '-', timeline: 't', stats: 's' };
   const tab = $derived(
     tabs.find((item) => item === page.url.searchParams.get('tab')) ?? 'overview'
   );
@@ -65,14 +73,36 @@
           year: 'numeric'
         })
       : 'Unavailable';
+  let tabNavigation = $state<HTMLElement>();
+  $effect(() => {
+    void tab;
+    const frame = requestAnimationFrame(() => {
+      const current = tabNavigation?.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!current || !tabNavigation) return;
+      const navigation = tabNavigation.getBoundingClientRect();
+      const anchor = current.getBoundingClientRect();
+      if (anchor.left < navigation.left || anchor.right > navigation.right)
+        tabNavigation.scrollTo({ left: tabNavigation.scrollLeft + anchor.left - navigation.left - (navigation.width - anchor.width) / 2 });
+    });
+    return () => cancelAnimationFrame(frame);
+  });
   function tabUrl(value: string) {
     const url = new URL(page.url);
     url.searchParams.set('tab', value);
     url.hash = '';
+    if (value !== 'code') url.searchParams.delete('file');
     return `${url.pathname}${url.search}`;
+  }
+  function prefetchTab(value: string) {
+    if (value === 'code') void getSourceFiles({ path: pkg.path, modulePath: pkg.modulePath, version: pkg.version });
+    if (value === 'changelog' && pkg.repoUrl) void getReleases(pkg.repoUrl);
   }
   function shortcut(event: KeyboardEvent) {
     if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.isComposing ||
+      (event.target instanceof HTMLElement && event.target.isContentEditable) ||
       event.target instanceof HTMLInputElement ||
       event.target instanceof HTMLSelectElement ||
       event.target instanceof HTMLTextAreaElement ||
@@ -81,8 +111,8 @@
       event.altKey
     )
       return;
-    if (event.key === 'd') void goto(tabUrl('docs'));
-    if (event.key === 'm') void goto(tabUrl('overview'));
+    const destination = tabs.find((item) => tabBindings[item] === event.key);
+    if (destination) { event.preventDefault(); void goto(tabUrl(destination)); }
   }
 </script>
 
@@ -114,21 +144,22 @@
   <div class="package-path">
     <span>{pkg.path}</span><Copy text={pkg.path} label="Copy import path" />
   </div>
-  <nav class="package-tabs" aria-label="Package sections">
+  <nav class="package-tabs" aria-label="Package sections" bind:this={tabNavigation}>
     {#each tabs as item}<a
         href={tabUrl(item)}
         class:active={tab === item}
         aria-current={tab === item ? 'page' : undefined}
+        aria-keyshortcuts={tabBindings[item]}
+        onmouseenter={() => prefetchTab(item)}
+        onfocus={() => prefetchTab(item)}
         >{item === 'overview'
-          ? 'Overview'
+          ? 'Main'
           : item === 'docs'
-            ? 'Documentation'
+            ? 'Docs'
             : item === 'imported-by'
               ? 'Imported by'
-              : item[0]!.toUpperCase() + item.slice(1)}{#if item === 'docs'}<kbd
-            >d</kbd
-          >{:else if item === 'overview'}<kbd>m</kbd>{/if}</a
-      >{/each}
+              : item[0]!.toUpperCase() + item.slice(1)}{#if tabBindings[item]}<kbd>{tabBindings[item]}</kbd>{/if}</a>
+      {/each}
   </nav>
   <div class="package-body">
     <div class="package-main">
@@ -219,6 +250,10 @@
             version={pkg.version}
             onloaded={(value) => (loadedDocumentation = value)}
           />{/key}
+      {:else if tab === 'code'}
+        {#key `${pkg.path}@${pkg.version}`}<PackageCode path={pkg.path} modulePath={pkg.modulePath} version={pkg.version} />{/key}
+      {:else if tab === 'changelog'}
+        <PackageChangelog repoUrl={pkg.repoUrl} version={pkg.version} />
       {:else if tab === 'packages'}
         <div class="list-heading">
           <h2>Packages in this module</h2>
@@ -279,6 +314,22 @@
               </div>{:else}<div class="notice">
                 Version history unavailable.
               </div>{/if}
+          {:else if tab === 'timeline'}
+            <div class="list-heading"><h2>Timeline</h2><span>{details.versions?.length ?? '—'} recent versions</span></div>
+            <p class="tab-intro">Module releases recorded by pkg.go.dev, newest dated releases first. Showing up to 30 versions.</p>
+            {#if details.versions?.length}
+              <ol class="release-timeline">
+                {#each [...details.versions].sort((a, b) => (b.commitTime ?? '').localeCompare(a.commitTime ?? '')) as release}
+                  <li><time datetime={release.commitTime}>{date(release.commitTime)}</time><div>
+                    <a href="/package/{pkg.path}?version={encodeURIComponent(release.version)}&tab=docs">{release.version}</a>
+                    {#if release.retracted}<span class="release-label">retracted</span>{/if}
+                    <div class="dependency-install"><code>go get {pkg.path}@{release.version}</code><Copy text={`go get ${pkg.path}@${release.version}`} label={`Copy go get for ${release.version}`} /></div>
+                  </div></li>
+                {/each}
+              </ol>
+            {:else}<div class="notice">Version history unavailable.</div>{/if}
+          {:else if tab === 'stats'}
+            <PackageStats {details} />
           {:else if tab === 'imported-by'}<div class="list-heading">
               <h2>Imported by</h2>
               <span>{formatNumber(details.importedBy?.total)} packages</span>

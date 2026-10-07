@@ -7,6 +7,14 @@ const linksSchema = v.record(
   v.pipe(v.string(), v.url(), v.regex(/^https:\/\//))
 );
 
+const indexSchema = v.object({
+  links: linksSchema,
+  files: v.array(v.object({
+    name: v.string(),
+    url: v.pipe(v.string(), v.url(), v.regex(/^https:\/\//))
+  }))
+});
+
 export function documentationUrl(
   path: string,
   modulePath: string,
@@ -17,12 +25,12 @@ export function documentationUrl(
 }
 
 /** Cache the source locations published by pkg.go.dev, including file and line. */
-export async function sourceLinks(
+export async function sourceIndex(
   path: string,
   modulePath: string,
   version: string
-): Promise<Record<string, string>> {
-  return cached(`source-links:v1:${path}@${version}`, linksSchema, async () => {
+) {
+  return cached(`source-index:v2:${path}@${version}`, indexSchema, async () => {
     const response = await fetch(documentationUrl(path, modulePath, version), {
       signal: AbortSignal.timeout(8_000),
       headers: { 'User-Agent': 'briotap-prototype' }
@@ -45,6 +53,35 @@ export async function sourceLinks(
       )
         links[node.id] = href;
     }
-    return links;
+    const files = [...document.querySelectorAll('a')].flatMap((anchor) => {
+      const name = (anchor.textContent ?? '').trim();
+      const url = anchor.getAttribute('href') ?? '';
+      return /^[a-zA-Z0-9_.-]+\.go$/.test(name) && /^https:\/\//.test(url) && !url.includes('#')
+        ? [{ name, url }]
+        : [];
+    });
+    return { links, files: [...new Map(files.map((file) => [file.name, file])).values()] };
   });
+}
+
+export async function sourceLinks(path: string, modulePath: string, version: string): Promise<Record<string, string>> {
+  return (await sourceIndex(path, modulePath, version)).links;
+}
+
+/** Read only files listed by the selected package's original documentation. */
+export async function sourceFile(path: string, modulePath: string, version: string, name: string) {
+  const file = (await sourceIndex(path, modulePath, version)).files.find((item) => item.name === name);
+  if (!file) throw new Error('Source file not found');
+  const url = new URL(file.url);
+  if (url.hostname !== 'github.com' || !url.pathname.includes('/blob/'))
+    return { name, url: file.url, code: null };
+  const raw = new URL(url.pathname.replace('/blob/', '/'), 'https://raw.githubusercontent.com');
+  const code = await cached(`source-file:v1:${raw}`, v.string(), async () => {
+    const response = await fetch(raw, { signal: AbortSignal.timeout(12_000) });
+    if (!response.ok) throw new Error(`Source returned ${response.status}`);
+    const text = await response.text();
+    if (text.length > 200_000) throw new Error('Source file is too large to display');
+    return text;
+  });
+  return { name, url: file.url, code };
 }
