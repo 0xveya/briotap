@@ -28,8 +28,3 @@ export const getDocumentation = query(v.object({ path, version }), async (input)
 });
 export const getInsights = query(v.object({ path, modulePath: path, version }), (input) => insights(input.path, input.modulePath, input.version));
 
-export const getImportStatus = query(async () => {
-  const { prisma } = await import('$lib/server/prisma');
-  const cursor = await prisma.importCursor.findUnique({ where: { source: 'go-module-index' } });
-  return { bytesImported: Number(cursor?.offset ?? 0n) };
-});
