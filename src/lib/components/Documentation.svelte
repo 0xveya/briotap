@@ -99,13 +99,13 @@
           <summary bind:this={symbolToggle}
             >Symbols <span>{result.data.symbols.length}</span></summary
           >
-          {#if symbolsOpen}<div class="reader-symbol-menu">
+          <div class="reader-symbol-menu" hidden={!symbolsOpen}>
               <SymbolIndex
                 symbols={result.data.symbols}
                 id="reader-symbol-search"
                 onselect={() => (symbolsOpen = false)}
               />
-            </div>{/if}
+            </div>
         </details>
         <label class="reader-size"
           ><span class="sr-only">Documentation text size</span>

@@ -2,25 +2,31 @@
   import { createVirtualizer } from '@tanstack/svelte-virtual';
   import { get } from 'svelte/store';
   import { page } from '$app/state';
-  import type { documentation } from '$lib/server/documentation';
+  import { goto } from '$app/navigation';
+  import {
+    indexSymbols,
+    searchSymbols,
+    matchedName,
+    type SymbolEntry,
+    type SymbolKind
+  } from '$lib/symbol-search';
 
-  type Symbol = Awaited<ReturnType<typeof documentation>>['symbols'][number];
   let {
     symbols,
     id = 'symbol-search',
     onselect
-  }: { symbols: Symbol[]; id?: string; onselect?: () => void } = $props();
+  }: { symbols: SymbolEntry[]; id?: string; onselect?: () => void } = $props();
   let filter = $state('');
   let viewport = $state<HTMLElement>();
-  const filtered = $derived(
-    symbols.filter((symbol) =>
-      symbol.name.toLowerCase().includes(filter.toLowerCase())
-    )
-  );
+  let kind = $state<SymbolKind>('all');
+  let signatures = $state(false);
+  const indexed = $derived(indexSymbols(symbols));
+  const filtered = $derived(searchSymbols(indexed, filter, kind, signatures));
+  const rowHeight = 56;
   const virtualizer = createVirtualizer<HTMLElement, HTMLAnchorElement>({
     count: 0,
     getScrollElement: () => viewport ?? null,
-    estimateSize: () => 32,
+    estimateSize: () => rowHeight,
     overscan: 5
   });
 
@@ -35,9 +41,40 @@
     instance.scrollToOffset(0);
   });
 
+  function focusResult(index: number) {
+    get(virtualizer).scrollToIndex(index, { align: 'auto' });
+    requestAnimationFrame(() =>
+      viewport
+        ?.querySelector<HTMLAnchorElement>(`[data-index="${index}"]`)
+        ?.focus()
+    );
+  }
+  function searchKey(event: KeyboardEvent) {
+    if (!filtered.length) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusResult(0);
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onselect?.();
+      void goto(`#${filtered[0]!.id}`);
+    }
+  }
   function navigate(event: KeyboardEvent) {
-    if (!(event.target instanceof HTMLAnchorElement)) return;
+    if (
+      !(event.target instanceof HTMLAnchorElement) ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    )
+      return;
     const index = Number(event.target.dataset.index);
+    if (event.key === 'ArrowUp' && index === 0) {
+      event.preventDefault();
+      document.getElementById(id)?.focus();
+      return;
+    }
     const next =
       event.key === 'ArrowDown'
         ? index + 1
@@ -51,12 +88,7 @@
     if (next === null) return;
     event.preventDefault();
     const destination = Math.max(0, Math.min(filtered.length - 1, next));
-    get(virtualizer).scrollToIndex(destination, { align: 'auto' });
-    requestAnimationFrame(() =>
-      viewport
-        ?.querySelector<HTMLAnchorElement>(`[data-index="${destination}"]`)
-        ?.focus()
-    );
+    focusResult(destination);
   }
 </script>
 
@@ -67,7 +99,25 @@
   type="search"
   placeholder="Search symbols"
   bind:value={filter}
+  onkeydown={searchKey}
+  autocomplete="off"
+  spellcheck="false"
+  aria-describedby={`${id}-help`}
 />
+<div class="symbol-controls">
+  <select aria-label="Symbol kind" bind:value={kind}>
+    <option value="all">All symbols</option><option value="func"
+      >Functions</option
+    ><option value="method">Methods</option><option value="type">Types</option
+    ><option value="const">Constants</option><option value="var"
+      >Variables</option
+    >
+  </select>
+  <label><input type="checkbox" bind:checked={signatures} /> Signatures</label>
+</div>
+<p class="symbol-help" id={`${id}-help`}>
+  Name, receiver + method, or initials. ↓ to select, Enter to open.
+</p>
 <p class="symbol-count" aria-live="polite">
   {filtered.length}
   {filtered.length === 1 ? 'symbol' : 'symbols'}
@@ -77,7 +127,7 @@
     class="virtual-symbols"
     aria-label="Package symbols"
     bind:this={viewport}
-    style:height="{Math.min(filtered.length * 32, 384)}px"
+    style:height="{Math.min(filtered.length * rowHeight, 336)}px"
   >
     <div
       style:height="{$virtualizer.getTotalSize()}px"
@@ -101,13 +151,28 @@
           >
             <span class="symbol-kind"
               >{symbol.kind === 'func'
-                ? 'fn'
-                : symbol.kind === 'type'
-                  ? 'ty'
-                  : symbol.kind.slice(0, 2)}</span
-            ><span>{symbol.name}</span>
+                ? symbol.name.includes('.')
+                  ? 'method'
+                  : 'func'
+                : symbol.kind}</span
+            >
+            <span class="symbol-detail"
+              ><strong
+                >{#each matchedName(symbol.name, filter) as part}{#if part.matched}<mark
+                      >{part.text}</mark
+                    >{:else}{part.text}{/if}{/each}</strong
+              ><small>{symbol.signature}</small></span
+            >
           </a>{/if}
       {/each}
     </div>
   </nav>
-{:else}<p class="sidebar-note">No matching symbols.</p>{/if}
+{:else}<p class="sidebar-note">No matching symbols.</p>
+  <button
+    class="symbol-reset"
+    onclick={() => {
+      filter = '';
+      kind = 'all';
+      signatures = false;
+    }}>Clear filters</button
+  >{/if}

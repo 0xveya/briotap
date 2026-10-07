@@ -30,7 +30,7 @@ const renderedSchema = v.object({
 
 export async function documentation(path: string, version: string) {
   return cached(
-    `rendered-docs:v1:${path}@${version}`,
+    `rendered-docs:v2:${path}@${version}`,
     renderedSchema,
     async () => renderDocumentation(path, version)
   );
@@ -66,23 +66,25 @@ async function renderDocumentation(path: string, version: string) {
   for (const pre of document.querySelectorAll('pre')) {
     const signature = (pre.textContent ?? '').trim();
     const match =
-      /^(func|type|var|const)\s+(?:\((?:\w+\s+)?\*?([\w\[\]]+)\)\s+)?([A-Z]\w*)/.exec(
-        signature
-      );
-    if (!match) continue;
-    const name = match[2] ? `${match[2]}.${match[3]}` : match[3]!;
-    const id = `symbol-${name}`;
-    const heading = document.createElement('h3');
-    heading.id = id;
-    heading.textContent = name;
-    pre.before(heading);
-    symbols.push({
-      id,
-      name,
-      kind: match[1]!,
-      signature: signature.split('\n')[0]!
-    });
+      /^(func|type|var|const)\s+(?:\((?:\w+\s+)?\*?(\w+(?:\[[^\]]+\])?)\)\s+)?([A-Z]\w*)/.exec(signature);
+    const declarations = match
+      ? [{ kind: match[1]!, name: match[2] ? `${match[2]}.${match[3]}` : match[3]! }]
+      : /^(var|const)\s*\(/.test(signature)
+        ? [...signature.matchAll(/^\t([A-Z]\w*)\b/gm)].map((item) => ({
+            kind: signature.startsWith('const') ? 'const' : 'var', name: item[1]!
+          }))
+        : [];
+    for (const declaration of declarations) {
+      if (symbols.some((symbol) => symbol.name === declaration.name)) continue;
+      const id = `symbol-${declaration.name}`;
+      const heading = document.createElement('h3');
+      heading.id = id;
+      heading.textContent = declaration.name;
+      pre.before(heading);
+      symbols.push({ id, name: declaration.name, kind: declaration.kind, signature: signature.split('\n')[0]! });
+    }
   }
+
   for (const anchor of document.querySelectorAll('a[href]')) {
     const href = anchor.getAttribute('href') ?? '';
     if (
