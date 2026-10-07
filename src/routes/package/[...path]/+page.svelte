@@ -10,8 +10,6 @@
   import Documentation from '$lib/components/Documentation.svelte';
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { sourceBase } from '$lib/source-link';
-  import SymbolIndex from '$lib/components/SymbolIndex.svelte';
   import DependencyList from '$lib/components/DependencyList.svelte';
   import VersionPicker from '$lib/components/VersionPicker.svelte';
   import RepositoryIcon from '$lib/components/RepositoryIcon.svelte';
@@ -202,10 +200,10 @@
             </div>
             <div>
               <span>Dependencies</span><strong
-                >{info.current?.requirements
+                ><a href="{tabUrl('dependencies')}#package-imports" title="View dependencies and package imports">{info.current?.requirements
                   ? info.current.requirements.filter((item) => !item.indirect)
                       .length
-                  : '—'} direct</strong
+                  : '—'} direct</a></strong
               >
             </div>
             <div>
@@ -359,7 +357,7 @@
               />{:else}<div class="notice">
                 Module requirements are unavailable from deps.dev.
               </div>{/if}
-            <div class="list-heading"><h2>Package imports</h2></div>
+            <div class="list-heading" id="package-imports"><h2>Package imports</h2></div>
             <p class="tab-intro">
               Direct imports used by this package in its default build context.
             </p>
@@ -415,18 +413,11 @@
           {#if documentationData}<div><dt>Redistributable</dt><dd>{documentationData.isRedistributable ? 'Yes' : 'No'}</dd></div>{/if}
         </dl>
       </section>
-      {#if documentationData && (tab === 'overview' || tab === 'docs')}<section
-          class="sidebar-block doc-outline"
-        >
-          <h2>
-            Symbols <span style="color:var(--muted)"
-              >({documentationData.symbols.length})</span
-            >
-          </h2>
-          <SymbolIndex
-            symbols={documentationData.symbols}
-            sourceBase={sourceBase(pkg.path, pkg.modulePath, pkg.version)}
-          />
+      {#if documentationData && (tab === 'overview' || tab === 'docs')}<section class="sidebar-block">
+          <a class="sidebar-symbol-trigger" href="{tabUrl('docs')}&find=symbols" aria-keyshortcuts="Alt+s">
+            <Icon name="search" size={16} /> Find symbol
+            <span>{formatNumber(documentationData.symbols.length)}</span><kbd>Alt S</kbd>
+          </a>
         </section>{:else}<section class="sidebar-block">
           <h2>Module packages</h2>
           {#each pkg.packages.slice(0, 8) as item}<a

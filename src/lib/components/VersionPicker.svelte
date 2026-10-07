@@ -18,13 +18,9 @@
   let root = $state<HTMLElement>();
   let trigger = $state<HTMLElement>();
   const choices = $derived(
-    [
-      {
-        version: value,
-        retracted: versions?.find((item) => item.version === value)?.retracted
-      },
-      ...(versions?.filter((item) => item.version !== value) ?? [])
-    ].filter((item) =>
+    (versions?.some((item) => item.version === value)
+      ? versions
+      : [{ version: value, retracted: false }, ...(versions ?? [])]).filter((item) =>
       item.version.toLowerCase().includes(filter.toLowerCase())
     )
   );
@@ -87,7 +83,7 @@
         autocomplete="off"
       />
       <div class="version-choices">
-        {#each choices as item (item.version)}<div class="version-choice">
+        {#each choices as item (item.version)}<div class="version-choice" class:current={item.version === value}>
             <a
               href={href(item.version)}
               aria-current={item.version === value ? 'true' : undefined}

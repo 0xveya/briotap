@@ -2012,19 +2012,20 @@ kbd,
 .version-picker[open] > summary { border-color: var(--pink); }
 .version-menu {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
-  width: min(340px, calc(100vw - 36px)); padding: 12px;
+  width: min(300px, calc(100vw - 36px)); padding: 8px;
   border: 1px solid var(--border); border-radius: 5px; background: var(--surface);
   box-shadow: 0 12px 40px var(--shadow);
 }
 .version-menu > input {
   width: 100%; min-width: 0; height: 44px; padding: 8px 10px;
   border: 1px solid var(--line); border-radius: 3px;
-  background: var(--bg); font-size: 16px; margin-bottom: 8px;
+  background: var(--bg); font: 16px 'DM Sans', sans-serif; margin-bottom: 8px;
 }
-.version-choices { max-height: min(360px, 50dvh); overflow-y: auto; overscroll-behavior: contain; }
-.version-choice { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.version-choices { max-height: min(280px, 45dvh); overflow-y: auto; overscroll-behavior: contain; }
+.version-choice { display: flex; align-items: center; border-radius: 3px; }
+.version-choice:hover, .version-choice.current { background: var(--accent-wash); }
 .version-choice > a { display: flex; align-items: center; flex: 1; min-width: 0; min-height: 44px; gap: 8px; padding: 8px; }
-.version-choice > a:hover, .version-choice > a[aria-current] { background: var(--accent-wash); color: var(--pink); }
+.version-choice > a:hover, .version-choice > a[aria-current] { color: var(--pink); }
 .version-choice > a > span { overflow-wrap: anywhere; }
 .version-choice small { font: 10px 'DM Sans', sans-serif; color: var(--muted); margin-left: auto; }
 .version-message { margin: 12px 4px 0; color: var(--muted); font: 12px 'DM Sans', sans-serif; }
@@ -2189,3 +2190,9 @@ kbd,
 .catalog-placeholder { min-height: 430px; }
 .catalog-placeholder .skeleton { padding: 20px 0; }
 @media (max-width: 780px) { .catalog-placeholder { min-height: 650px; } }
+
+.sidebar-symbol-trigger { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; }
+.sidebar-symbol-trigger:hover { color: var(--pink); }
+.sidebar-symbol-trigger > span { color: var(--muted); font: 12px var(--mono); }
+.sidebar-symbol-trigger > kbd { margin-left: auto; }
+#package-imports { scroll-margin-top: 100px; }
