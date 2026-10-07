@@ -1,4 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import {
+    readReaderPreferences,
+    saveReaderPreferences,
+    type ReaderPreferences
+  } from '$lib/reader-preferences';
   import { page } from '$app/state';
   import { getDocumentation } from '../../routes/index.remote';
   import type { documentation } from '$lib/server/documentation';
@@ -17,8 +23,20 @@
   const doc = $derived(getDocumentation({ path, version }));
   let symbolsOpen = $state(false);
   let symbolToggle = $state<HTMLElement>();
-  let textSize = $state('normal');
+  let textSize = $state<ReaderPreferences['textSize']>('normal');
   let wrapCode = $state(false);
+  let preferencesReady = $state(false);
+  onMount(() => {
+    const saved = readReaderPreferences();
+    if (saved) {
+      textSize = saved.textSize;
+      wrapCode = saved.wrapCode;
+    }
+    preferencesReady = true;
+  });
+  $effect(() => {
+    if (preferencesReady) saveReaderPreferences({ textSize, wrapCode });
+  });
   let visible = $state(40);
   $effect(() => {
     if (!symbolsOpen) return;
@@ -32,7 +50,9 @@
       ? Math.max(
           0,
           doc.current.data.sections.findIndex(
-            (section) => `#${section.id}` === page.url.hash || section.aliases.includes(page.url.hash.slice(1))
+            (section) =>
+              `#${section.id}` === page.url.hash ||
+              section.aliases.includes(page.url.hash.slice(1))
           )
         )
       : 0
@@ -67,7 +87,23 @@
 
 <svelte:window
   onkeydown={(event) => {
+    if (
+      event.key === 's' &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !(
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement ||
+        (event.target instanceof HTMLElement && event.target.isContentEditable)
+      )
+    ) {
+      event.preventDefault();
+      symbolsOpen = true;
+    }
     if (event.key === 'Escape' && symbolsOpen) {
+      event.preventDefault();
       symbolsOpen = false;
       symbolToggle?.focus();
     }
@@ -97,15 +133,16 @@
       <div class="reader-toolbar">
         <details class="reader-symbols" bind:open={symbolsOpen}>
           <summary bind:this={symbolToggle}
-            >Symbols <span>{result.data.symbols.length}</span></summary
+            >Symbols <span>{result.data.symbols.length}</span>
+            <kbd>s</kbd></summary
           >
           <div class="reader-symbol-menu" hidden={!symbolsOpen}>
-              <SymbolIndex
-                symbols={result.data.symbols}
-                id="reader-symbol-search"
-                onselect={() => (symbolsOpen = false)}
-              />
-            </div>
+            <SymbolIndex
+              symbols={result.data.symbols}
+              id="reader-symbol-search"
+              onselect={() => (symbolsOpen = false)}
+            />
+          </div>
         </details>
         <label class="reader-size"
           ><span class="sr-only">Documentation text size</span>
