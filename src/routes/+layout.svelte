@@ -3,6 +3,7 @@
   import type { Snippet } from 'svelte';
   import Search from '$lib/components/Search.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import { prefetchOnIntent } from '$lib/prefetch';
   import '../app.css';
   let { children }: { children: Snippet } = $props();
 </script>
@@ -34,7 +35,7 @@
     </nav>
   </div>
 </header>
-<main id="main">{@render children()}</main>
+<main id="main" use:prefetchOnIntent>{@render children()}</main>
 <footer class="site-footer">
   <a class="footer-brand" href="/">briotap · Go packages</a>
   <div>

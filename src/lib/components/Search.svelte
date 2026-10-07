@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
   import { searchPackages } from '../../routes/index.remote';
   import type { SearchResult } from '$lib/server/search';
@@ -69,6 +70,8 @@
           selected + (event.key === 'ArrowDown' ? 1 : -1)
         )
       );
+      if (selected >= 0 && results[selected])
+        void prefetchLink(`/package/${results[selected]!.path}`);
     }
     if (event.key === 'Enter' && selected >= 0 && results[selected]) {
       event.preventDefault();
@@ -88,7 +91,7 @@
       open = false;
   }}
 />
-<div class:large class="search-container">
+<div class:large class="search-container" use:prefetchOnIntent>
   <form
     class="search-form"
     action="/search"
