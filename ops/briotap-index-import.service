@@ -4,7 +4,7 @@ Description=Import Go module index into briotap PostgreSQL
 [Service]
 Type=simple
 WorkingDirectory=/home/veya/coding/briotap
-ExecStart=/usr/bin/mise run index-import
+ExecStart=/usr/bin/mise run index:import
 Restart=on-failure
 RestartSec=30s
 

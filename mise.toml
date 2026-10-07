@@ -1,31 +1,32 @@
-[tasks.db-up]
+# personal:* tasks use Veya's SSH host, paths, and services.
+[tasks."db:up"]
 run = 'docker compose up -d --wait postgres'
 
-[tasks.db-migrate]
+[tasks."db:migrate"]
 run = 'bunx --bun prisma migrate deploy'
 
-[tasks.index-download]
+[tasks."index:download"]
 run = 'bun scripts/download-index.ts'
 
-[tasks.index-import]
+[tasks."index:import"]
 run = 'bun scripts/import-index.ts'
 
-[tasks.enrich]
+[tasks."data:enrich"]
 run = 'bun scripts/enrich-modules.ts'
 
-[tasks.nas-seed]
+[tasks."personal:nas:seed"]
 run = 'bash scripts/seed-nas.sh'
 
-[tasks.nas-prioritize]
+[tasks."personal:nas:prioritize"]
 run = 'bash scripts/nas-prioritize.sh'
 
-[tasks.nas-pull]
+[tasks."personal:nas:pull"]
 run = 'bash scripts/pull-enrichment.sh'
 
-[tasks.enrichment-import]
+[tasks."data:import"]
 run = 'bun scripts/import-enrichment.ts'
 
-[tasks.nas-sync]
+[tasks."personal:nas:sync"]
 run = 'bash scripts/pull-enrichment.sh && bun scripts/import-enrichment.ts'
 
 [tasks.search]

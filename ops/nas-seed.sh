@@ -3,7 +3,7 @@ set -euo pipefail
 
 data=/srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap
 if [[ -e "$data/enrichment-cursor.json" ]]; then
-  printf 'NAS enrichment already started; use mise run nas-prioritize to reorder pending paths\n' >&2
+  printf 'NAS enrichment already started; use mise run personal:nas:prioritize to reorder pending paths\n' >&2
   exit 1
 fi
 rm -f "$data/module-paths.txt.next"
