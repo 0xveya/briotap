@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up Briotap database and worker checkpoints
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/briotap/app
+EnvironmentFile=/etc/briotap/ops.env
+ExecStart=/usr/bin/bash scripts/scheduled-backup.sh

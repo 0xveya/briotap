@@ -6,7 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit",
-    "prepare": "prisma generate && svelte-kit sync",
+    "prepare": "svelte-kit sync && prisma generate",
     "index:download": "bun scripts/download-index.ts",
     "index:import": "bun scripts/import-index.ts",
     "enrich": "bun scripts/enrich-modules.ts",

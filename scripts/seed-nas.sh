@@ -2,7 +2,7 @@
 set -euo pipefail
 
 nas_data=/srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap
-ssh -o BatchMode=yes nas "test ! -e '$nas_data/enrichment-cursor.json' && mkdir -p '$nas_data' /opt/briotap"
+ssh -o BatchMode=yes nas "test ! -e '$nas_data/enrichment-cursor.json' && test ! -e '$nas_data/enrichment-worker.sqlite' && mkdir -p '$nas_data' /opt/briotap"
 
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT

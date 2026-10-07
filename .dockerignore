@@ -1,0 +1,10 @@
+.git
+.jj
+.env
+.env.*
+node_modules
+generated
+.svelte-kit
+build
+data
+TODO.md

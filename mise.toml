@@ -24,10 +24,46 @@ run = 'bash scripts/nas-prioritize.sh'
 run = 'bash scripts/pull-enrichment.sh'
 
 [tasks."data:import"]
-run = 'bun scripts/import-enrichment.ts'
+run = 'mkdir -p data && flock --nonblock data/enrichment-import.lock bun scripts/import-enrichment.ts'
 
 [tasks."personal:nas:sync"]
-run = 'bash scripts/pull-enrichment.sh && bun scripts/import-enrichment.ts'
+run = 'bash scripts/sync-nas.sh'
+
+[tasks."personal:nas:worker:install"]
+run = 'bash scripts/install-nas-worker.sh'
+
+[tasks."personal:nas:worker:status"]
+run = 'ssh -o BatchMode=yes nas "node /opt/briotap/worker.mjs /srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap --status"'
+
+[tasks.worker]
+run = 'mkdir -p data && flock --nonblock data/enrichment-worker.lock bun scripts/worker.ts data'
+
+[tasks."worker:status"]
+run = 'bun scripts/worker.ts data --status'
+
+[tasks."worker:build"]
+run = 'bun build scripts/worker.ts --target=node --outfile=build/worker.mjs'
+
+[tasks."test:worker"]
+run = 'bun test scripts/lib/worker-store.test.ts scripts/lib/jsonl.test.ts'
+
+[tasks."test:budget"]
+run = 'bun test src/lib/server/request-budget.test.ts'
+
+[tasks."test:server"]
+run = 'bun test src/lib/server/admission.test.ts src/lib/server/cache.test.ts src/lib/server/response.test.ts src/lib/server/source.test.ts'
+
+[tasks."stack:build"]
+run = 'docker-compose build'
+
+[tasks."stack:up"]
+run = 'docker-compose up -d --wait'
+
+[tasks."stack:down"]
+run = 'docker-compose down'
+
+[tasks."stack:status"]
+run = 'docker-compose ps'
 
 [tasks.search]
 run = 'bun scripts/search.ts'
@@ -47,3 +83,12 @@ docker-cli = "latest"
 docker-compose = "latest"
 jq = "latest"
 node = "latest"
+
+[tasks."stack:ops"]
+run = 'bash scripts/stack-ops.sh'
+
+[tasks."personal:nas:deploy"]
+run = 'bash scripts/deploy-nas.sh'
+
+[tasks."personal:nas:status"]
+run = 'bash scripts/deploy-nas.sh --status'

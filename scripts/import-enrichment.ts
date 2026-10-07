@@ -13,6 +13,8 @@ type Entry = {
 
 const source = 'nas-enrichment';
 const input = resolve('data/module-enrichment.jsonl');
+const limit = Number(process.argv.find((arg) => arg.startsWith('--limit='))?.slice(8) ?? Infinity);
+if (limit !== Infinity && (!Number.isSafeInteger(limit) || limit < 1)) throw new Error('--limit must be a positive integer');
 let offset = 0;
 let imported = 0;
 
@@ -85,11 +87,16 @@ async function importEntry(entry: Entry, nextOffset: number): Promise<void> {
           repoUrl: module.repoUrl, commitTime, enrichedAt: new Date(), lastError: null
         }
       });
+      const packages = entry.packages.map((pkg) => ({
+        ...pkg, modulePath: entry.path, version: module.version
+      }));
+      await tx.packageVersion.createMany({
+        data: packages,
+        skipDuplicates: true
+      });
       await tx.package.deleteMany({ where: { modulePath: entry.path } });
       await tx.package.createMany({
-        data: entry.packages.map((pkg) => ({
-          ...pkg, modulePath: entry.path, version: module.version
-        })),
+        data: packages,
         skipDuplicates: true
       });
     }
@@ -111,7 +118,7 @@ try {
   if (size > offset) {
     let pending = Buffer.alloc(0);
     const stream = createReadStream(input, { start: offset, end: size - 1 });
-    for await (const chunk of stream) {
+    read: for await (const chunk of stream) {
       pending = Buffer.concat([pending, chunk as Buffer]);
       let newline: number;
       while ((newline = pending.indexOf(10)) !== -1) {
@@ -121,6 +128,7 @@ try {
         const nextOffset = offset + newline + 1;
         await importEntry(entry, nextOffset);
         offset = nextOffset;
+        if (imported >= limit) break read;
       }
     }
   }

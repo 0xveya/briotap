@@ -1,19 +1,118 @@
+name: briotap
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-runtime: &runtime
+  image: briotap:local
+  build: .
+  restart: unless-stopped
+  init: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  logging: *logging
+
+x-database: &database
+  DATABASE_URL: postgres://briotap:briotap@postgres:5432/briotap
+
+x-budget: &budget
+  REQUEST_BUDGET_PATH: /app/budget/pkg.sqlite
+  PKG_REQUESTS_PER_SECOND: ${PKG_REQUESTS_PER_SECOND:-40}
+  PKG_RESERVED_REQUESTS_PER_SECOND: ${PKG_RESERVED_REQUESTS_PER_SECOND:-10}
+
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     restart: unless-stopped
+    stop_grace_period: 2m
+    logging: *logging
+    shm_size: 512m
+    command: [postgres, -c, shared_buffers=512MB, -c, maintenance_work_mem=256MB, -c, max_wal_size=4GB, -c, checkpoint_timeout=15min]
     environment:
       POSTGRES_DB: briotap
       POSTGRES_USER: briotap
       POSTGRES_PASSWORD: briotap
     ports:
-      - '127.0.0.1:55432:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-55432}:5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_DIR:-postgres_data}:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U briotap -d briotap']
       interval: 2s
       timeout: 2s
       retries: 20
+
+  migrate:
+    <<: *runtime
+    restart: 'no'
+    environment: *database
+    command: ['bun', 'node_modules/prisma/build/index.js', 'migrate', 'deploy']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    <<: *runtime
+    mem_limit: 2g
+    environment:
+      <<: [*database, *budget]
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      ADDRESS_HEADER: ${ADDRESS_HEADER:-}
+    ports:
+      - '127.0.0.1:${APP_PORT:-3000}:3000'
+    volumes:
+      - ui_cache:/app/data/ui-cache
+      - request_budget:/app/budget
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'fetch("http://127.0.0.1:3000/", {headers: {"cf-connecting-ip": "127.0.0.1"}}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  scraper:
+    <<: *runtime
+    mem_limit: 2g
+    environment: *budget
+    command: ['flock', '--nonblock', '--no-fork', '--verbose', 'data/enrichment-worker.lock', 'bun', 'scripts/worker.ts', 'data']
+    volumes:
+      - ${BRIOTAP_DATA_DIR:-./data}:/app/data
+      - request_budget:/app/budget
+    stop_grace_period: 45s
+
+  importer:
+    <<: *runtime
+    mem_limit: 2g
+    environment: *database
+    command: ['flock', '--nonblock', '--no-fork', '--verbose', 'data/enrichment-import.lock', 'bun', 'scripts/import-worker.ts']
+    volumes:
+      - ${BRIOTAP_DATA_DIR:-./data}:/app/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    stop_grace_period: 45s
+
+  tunnel:
+    image: cloudflare/cloudflared:latest@sha256:a15a3b50b8dabd57ac2090e9484c0247dba9dfa1f0df4d298d4317f9d69eb2d5
+    profiles: [public]
+    restart: unless-stopped
+    command: [tunnel, --no-autoupdate, run, --token-file, /run/secrets/tunnel_token]
+    secrets: [tunnel_token]
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logging
+
+secrets:
+  tunnel_token:
+    file: ${CLOUDFLARED_TOKEN_FILE:-/etc/briotap/cloudflared-token}
+
 volumes:
   postgres_data:
+  ui_cache:
+  request_budget:

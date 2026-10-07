@@ -9,8 +9,11 @@ interface IndexEntry {
   Timestamp: string;
 }
 
-const source = 'go-module-index';
-const input = resolve('data/module-index.jsonl');
+const source = process.argv.find((arg) => arg.startsWith('--source='))?.slice(9) ?? 'go-module-index';
+const input = resolve(process.argv.find((arg) => arg.startsWith('--input='))?.slice(8) ?? 'data/module-index.jsonl');
+if (input !== resolve('data/module-index.jsonl') && source === 'go-module-index') {
+  throw new Error('Use a separate --source when importing another index file');
+}
 const limit = Number(process.argv.find((arg) => arg.startsWith('--limit='))?.slice(8) ?? Infinity);
 const batchSize = 1000;
 let batch: { modulePath: string; version: string; observedAt: string }[] = [];

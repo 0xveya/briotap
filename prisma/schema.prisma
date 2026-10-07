@@ -33,6 +33,7 @@ model Module {
   enrichedAt DateTime? @map("enriched_at") @db.Timestamptz(6)
   lastError String? @map("last_error") @db.Text
   packages Package[]
+  packageVersions PackageVersion[]
 
   @@map("modules")
 }
@@ -47,4 +48,20 @@ model Package {
 
   @@index([modulePath])
   @@map("packages")
+}
+
+/// Retained package metadata and optional documentation for each indexed version.
+model PackageVersion {
+  path String @db.Text
+  version String @db.Text
+  modulePath String @map("module_path") @db.Text
+  name String @db.Text
+  synopsis String @db.Text
+  documentation String? @db.Text
+  symbols Json?
+  module Module @relation(fields: [modulePath], references: [path], onDelete: Cascade)
+
+  @@id([path, version])
+  @@index([modulePath, version])
+  @@map("package_versions")
 }

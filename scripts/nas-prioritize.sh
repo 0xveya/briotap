@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ssh -o BatchMode=yes nas 'test ! -e /srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap/enrichment-worker.sqlite' || {
+  echo 'The durable worker owns the queue; do not reorder its backfill file.' >&2
+  exit 1
+}
+
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT
 bun build scripts/reorder-enrichment.ts --target=node --outfile="$temporary/reorder-enrichment.mjs"
