@@ -32,7 +32,7 @@
       ? Math.max(
           0,
           doc.current.data.sections.findIndex(
-            (section) => `#${section.id}` === page.url.hash
+            (section) => `#${section.id}` === page.url.hash || section.aliases.includes(page.url.hash.slice(1))
           )
         )
       : 0

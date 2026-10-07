@@ -25,12 +25,14 @@ const renderedSchema = v.object({
       signature: v.string()
     })
   ),
-  sections: v.array(v.object({ id: v.string(), html: v.string() }))
+  sections: v.array(
+    v.object({ id: v.string(), aliases: v.array(v.string()), html: v.string() })
+  )
 });
 
 export async function documentation(path: string, version: string) {
   return cached(
-    `rendered-docs:v2:${path}@${version}`,
+    `rendered-docs:v3:${path}@${version}`,
     renderedSchema,
     async () => renderDocumentation(path, version)
   );
@@ -59,6 +61,7 @@ async function renderDocumentation(path: string, version: string) {
     kind: string;
     signature: string;
   }[] = [];
+  const aliases = new Map<string, string[]>();
   document.querySelector('h1')?.remove();
   for (const heading of document.querySelectorAll('h2')) {
     heading.id = `section-${(heading.textContent ?? '').toLowerCase()}`;
@@ -66,22 +69,51 @@ async function renderDocumentation(path: string, version: string) {
   for (const pre of document.querySelectorAll('pre')) {
     const signature = (pre.textContent ?? '').trim();
     const match =
-      /^(func|type|var|const)\s+(?:\((?:\w+\s+)?\*?(\w+(?:\[[^\]]+\])?)\)\s+)?([A-Z]\w*)/.exec(signature);
-    const declarations = match
-      ? [{ kind: match[1]!, name: match[2] ? `${match[2]}.${match[3]}` : match[3]! }]
-      : /^(var|const)\s*\(/.test(signature)
-        ? [...signature.matchAll(/^\t([A-Z]\w*)\b/gm)].map((item) => ({
-            kind: signature.startsWith('const') ? 'const' : 'var', name: item[1]!
-          }))
-        : [];
-    for (const declaration of declarations) {
-      if (symbols.some((symbol) => symbol.name === declaration.name)) continue;
+      /^(func|type|var|const)\s+(?:\((?:\w+\s+)?\*?(\w+(?:\[[^\]]+\])?)\)\s+)?([A-Z]\w*)/.exec(
+        signature
+      );
+    const declarations = (
+      match
+        ? [
+            {
+              kind: match[1]!,
+              name: match[2] ? `${match[2]}.${match[3]}` : match[3]!,
+              signature: signature.split('\n')[0]!
+            }
+          ]
+        : /^(var|const)\s*\(/.test(signature)
+          ? [...signature.matchAll(/^\t([A-Z]\w*)\b[^\n]*/gm)].map((item) => ({
+              kind: signature.startsWith('const') ? 'const' : 'var',
+              name: item[1]!,
+              signature: `${signature.startsWith('const') ? 'const' : 'var'} ${item[0].trim()}`
+            }))
+          : []
+    ).filter(
+      (declaration) =>
+        !symbols.some((symbol) => symbol.name === declaration.name)
+    );
+    if (!declarations.length) continue;
+    const heading = document.createElement('h3');
+    heading.id = `symbol-${declarations[0]!.name}`;
+    heading.textContent = declarations.map((item) => item.name).join(', ');
+    aliases.set(
+      heading.id,
+      declarations.slice(1).map((item) => `symbol-${item.name}`)
+    );
+    pre.before(heading);
+    for (const [index, declaration] of declarations.entries()) {
       const id = `symbol-${declaration.name}`;
-      const heading = document.createElement('h3');
-      heading.id = id;
-      heading.textContent = declaration.name;
-      pre.before(heading);
-      symbols.push({ id, name: declaration.name, kind: declaration.kind, signature: signature.split('\n')[0]! });
+      if (index > 0) {
+        const alias = document.createElement('a');
+        alias.id = id;
+        heading.append(alias);
+      }
+      symbols.push({
+        id,
+        name: declaration.name,
+        kind: declaration.kind,
+        signature: declaration.signature
+      });
     }
   }
 
@@ -122,14 +154,14 @@ async function renderDocumentation(path: string, version: string) {
       'hr'
     ],
     allowedAttributes: {
-      a: ['href', 'title'],
+      a: ['href', 'title', 'id'],
       h2: ['id'],
       h3: ['id'],
       h4: ['id']
     },
     allowedSchemes: ['http', 'https', 'mailto']
   });
-  const sections: { id: string; html: string }[] = [];
+  const sections: { id: string; aliases: string[]; html: string }[] = [];
   let intro = html;
   if (symbols.length > 300) {
     const boundaries = [...html.matchAll(/<h3 id="(symbol-[^"]+)">/g)];
@@ -137,6 +169,7 @@ async function renderDocumentation(path: string, version: string) {
     for (const [index, match] of boundaries.entries()) {
       sections.push({
         id: match[1]!,
+        aliases: aliases.get(match[1]!) ?? [],
         html: html.slice(
           match.index,
           boundaries[index + 1]?.index ?? html.length
