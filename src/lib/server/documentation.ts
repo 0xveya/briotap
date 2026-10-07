@@ -32,7 +32,7 @@ const renderedSchema = v.object({
 
 export async function documentation(path: string, version: string) {
   return cached(
-    `rendered-docs:v3:${path}@${version}`,
+    `rendered-docs:v4:${path}@${version}`,
     renderedSchema,
     async () => renderDocumentation(path, version)
   );
@@ -67,6 +67,10 @@ async function renderDocumentation(path: string, version: string) {
     heading.id = `section-${(heading.textContent ?? '').toLowerCase()}`;
   }
   for (const pre of document.querySelectorAll('pre')) {
+    pre.textContent = (pre.textContent ?? '').replace(
+      /^(?:[ \t]*\r?\n)+|(?:\r?\n[ \t]*)+$/g,
+      ''
+    );
     const signature = (pre.textContent ?? '').trim();
     const match =
       /^(func|type|var|const)\s+(?:\((?:\w+\s+)?\*?(\w+(?:\[[^\]]+\])?)\)\s+)?([A-Z]\w*)/.exec(

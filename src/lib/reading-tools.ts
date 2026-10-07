@@ -1,3 +1,5 @@
+import { copyText } from './clipboard';
+
 const copyPath = 'M8 8h12v12H8z M4 15V4h11';
 const copiedPath = 'm5 12 4 4L19 6';
 
@@ -36,7 +38,10 @@ export function readingTools(
         const source = document.createElement('a');
         source.className = 'declaration-source';
         source.href = `${options.sourceBase}&symbol=${encodeURIComponent(heading.id.slice(7))}`;
-        source.textContent = 'Source ↗';
+        source.setAttribute('aria-label', `View source for ${name}`);
+        source.title = `View source for ${name}`;
+        source.innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>';
         source.target = '_blank';
         source.rel = 'noreferrer';
         heading.append(source);
@@ -70,12 +75,11 @@ export function readingTools(
       status.setAttribute('aria-live', 'polite');
       button.append(svg, status);
       button.onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(pre.textContent ?? '');
+        if (await copyText(pre.textContent ?? '')) {
           icon.setAttribute('d', copiedPath);
           status.textContent = 'Copied';
           button.setAttribute('aria-label', 'Copied');
-        } catch {
+        } else {
           status.textContent = 'Copy failed. Select the code to copy it.';
           button.title = 'Select the code to copy it';
         }
