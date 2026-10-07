@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
   import { searchPackages } from '../../routes/index.remote';
@@ -7,7 +7,8 @@
   import Icon from './Icon.svelte';
   let { large = false, value = '', oncommand }: { large?: boolean; value?: string; oncommand?: () => void } =
     $props();
-  let text = $state('');
+  let previousValue = untrack(() => value);
+  let text = $state(previousValue);
   let results = $state<SearchResult[]>([]);
   let open = $state(false);
   let loading = $state(false);
@@ -18,6 +19,7 @@
   let shortcutLabel = $state('Ctrl K');
   onMount(() => {
     if (/Mac|iPhone|iPad/.test(navigator.platform)) shortcutLabel = '⌘ K';
+    if (document.activeElement === input && input.value.trim()) open = true;
   });
   function focusSearch() {
     input.focus();
@@ -25,7 +27,10 @@
     open = true;
   }
   $effect(() => {
-    text = value;
+    if (value !== previousValue) {
+      previousValue = value;
+      text = value;
+    }
   });
   $effect(() => {
     const q = text.trim();
@@ -71,6 +76,7 @@
     }
   }
   function keydown(event: KeyboardEvent) {
+    if (event.isComposing) return;
     if (event.key === 'Escape') open = false;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();

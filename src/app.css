@@ -2185,3 +2185,7 @@ kbd,
   .header-inner { gap: 4px; }
   .wordmark { margin-right: auto; }
 }
+
+.catalog-placeholder { min-height: 430px; }
+.catalog-placeholder .skeleton { padding: 20px 0; }
+@media (max-width: 780px) { .catalog-placeholder { min-height: 650px; } }

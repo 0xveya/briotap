@@ -1,15 +1,6 @@
 <script lang="ts">
-  import { getCatalog } from './index.remote';
   import Search from '$lib/components/Search.svelte';
-  import Icon from '$lib/components/Icon.svelte';
-  const catalog = await getCatalog();
-  const count = (name: string) =>
-    catalog.estimates.find((row) => row.name === name)?.count ?? 0;
-  const compact = (value: number) =>
-    new Intl.NumberFormat('en', {
-      notation: 'compact',
-      maximumFractionDigits: 1
-    }).format(value);
+  import HomeCatalog from '$lib/components/HomeCatalog.svelte';
 </script>
 
 <svelte:head>
@@ -38,51 +29,28 @@
         >{/each}
     </div>
   </section>
-  <section class="index-strip" aria-label="Index coverage">
-    <div>
-      <strong>{compact(count('packages'))}</strong><span>Packages</span>
-    </div>
-    <div><strong>{compact(count('modules'))}</strong><span>Modules</span></div>
-    <div>
-      <strong>{compact(count('module_versions'))}</strong><span>Versions</span>
-    </div>
-    <p>Approximate counts</p>
-  </section>
-  <section class="discover" id="discover">
-    <div class="section-heading">
-      <h2>Browse packages</h2>
-      <a href="/search">Search all packages <Icon name="arrow" size={16} /></a>
-    </div>
-    <div class="collection-grid">
-      {#each catalog.collections as group}
-        <div class="collection">
-          <div class="collection-title"><h3>{group.name}</h3></div>
-          {#each group.packages.slice(0, 4) as pkg}
-            <a class="package-card" href="/package/{pkg.path}">
-              <div>
-                <strong>{pkg.name}</strong><span class="version"
-                  >{pkg.version}</span
-                >
-              </div>
-              <p>{pkg.synopsis || pkg.path}</p>
-              <span class="card-path">{pkg.modulePath}</span>
-            </a>
-          {/each}
-          <a
-            class="collection-more"
-            href="/search?q={encodeURIComponent(group.query)}"
-            >View more <Icon name="arrow" size={15} /></a
-          >
+  <svelte:boundary>
+    <HomeCatalog />
+    {#snippet pending()}
+      <section class="index-strip" aria-label="Loading index coverage" aria-busy="true">
+        {#each ['Packages', 'Modules', 'Versions'] as label}
+          <div><strong>—</strong><span>{label}</span></div>
+        {/each}
+        <p>Loading counts…</p>
+      </section>
+      <section class="discover" aria-busy="true" aria-label="Loading package collections">
+        <div class="section-heading">
+          <h2>Browse packages</h2><a href="/search">Search all packages →</a>
         </div>
-      {/each}
-    </div>
-  </section>
-  <div class="data-note">
-    Data from pkg.go.dev and deps.dev. {#if catalog.syncedAt}Updated {new Date(
-        catalog.syncedAt
-      ).toLocaleString('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-      })}.{/if}
-  </div>
+        <div class="collection-grid catalog-placeholder">
+          {#each [0, 1, 2] as group}
+            <div class="skeleton"><span></span><span></span><span></span></div>
+          {/each}
+        </div>
+      </section>
+    {/snippet}
+    {#snippet failed()}
+      <div class="notice">Package collections could not be loaded. <a href="/search">Search packages →</a></div>
+    {/snippet}
+  </svelte:boundary>
 </div>
