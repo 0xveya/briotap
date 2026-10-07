@@ -31,7 +31,7 @@
   let symbolsOpen = $state(false);
   let symbolToggle = $state<HTMLElement>();
   let textSize = $state<ReaderPreferences['textSize']>('normal');
-  let wrapCode = $state(false);
+  let wrapCode = $state(true);
   let preferencesReady = $state(false);
   onMount(() => {
     const saved = readReaderPreferences();
