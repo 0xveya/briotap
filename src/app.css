@@ -1921,7 +1921,7 @@ kbd,
 }
 
 .snippet-frame { position: relative; margin: 22px 0; }
-.prose .snippet-frame pre { margin: 0; padding-top: 52px; }
+.prose .snippet-frame pre { margin: 0; }
 .snippet-copy {
   position: absolute; top: 6px; right: 6px; width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
