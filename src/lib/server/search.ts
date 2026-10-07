@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { collections } from './catalog';
 
 export type SearchResult = {
   kind: 'package' | 'module';
@@ -7,46 +8,63 @@ export type SearchResult = {
   synopsis: string;
   version: string | null;
 };
+type Candidate = SearchResult & { score: number };
+const featured = new Set(collections.flatMap((group) => group.paths));
+const recent = new Map<string, { at: number; results: SearchResult[] }>();
 
+/** Search indexed names first, then descriptions and fuzzy paths when needed. */
 export async function search(query: string): Promise<SearchResult[]> {
   const q = query.trim().toLowerCase().slice(0, 200);
   if (!q) return [];
+  const existing = recent.get(q);
+  if (existing && Date.now() - existing.at < 30_000) return existing.results;
   const prefix = `${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-  const fuzzy = q.length >= 3;
-  return prisma.$queryRaw<SearchResult[]>`
-    WITH matches AS (
-      SELECT 'package'::text AS kind, path, name, synopsis, version,
-        CASE
-          WHEN lower(path) = ${q} THEN 1000
-          WHEN lower(name) = ${q} THEN 900
-          WHEN lower(path) LIKE ${prefix} THEN 800
-          WHEN lower(name) LIKE ${prefix} THEN 700
-          WHEN ${fuzzy} AND lower(path) % ${q} THEN 300 + similarity(lower(path), ${q}) * 100
-          WHEN ${fuzzy} AND lower(name) % ${q} THEN 250 + similarity(lower(name), ${q}) * 100
-          ELSE 100 + ts_rank(to_tsvector('english', synopsis), plainto_tsquery('english', ${q})) * 100
-        END AS score
-      FROM packages
-      WHERE lower(path) = ${q} OR lower(name) = ${q}
-        OR lower(path) LIKE ${prefix} OR lower(name) LIKE ${prefix}
-        OR (${fuzzy} AND (lower(path) % ${q} OR lower(name) % ${q}))
-        OR to_tsvector('english', synopsis) @@ plainto_tsquery('english', ${q})
-      UNION ALL
-      SELECT 'module'::text, path, name, ''::text, version,
-        CASE
-          WHEN lower(path) = ${q} THEN 950
-          WHEN lower(name) = ${q} THEN 650
-          WHEN lower(path) LIKE ${prefix} THEN 600
-          WHEN lower(name) LIKE ${prefix} THEN 550
-          ELSE 200 + greatest(similarity(lower(path), ${q}), similarity(lower(name), ${q})) * 100
-        END
-      FROM modules
-      WHERE enriched_at IS NOT NULL AND (
-        lower(path) = ${q} OR lower(name) = ${q}
-        OR lower(path) LIKE ${prefix} OR lower(name) LIKE ${prefix}
-        OR (${fuzzy} AND (lower(path) % ${q} OR lower(name) % ${q}))
-      )
-    )
-    SELECT kind, path, name, synopsis, version
-    FROM matches ORDER BY score DESC, path LIMIT 20
+  const strict = await prisma.$queryRaw<Candidate[]>`
+    (SELECT 'package'::text AS kind, path, name, synopsis, version, 1000 AS score
+      FROM packages WHERE lower(path) = ${q} LIMIT 1)
+    UNION ALL
+    (SELECT 'package', path, name, synopsis, version, 900
+      FROM packages WHERE lower(name) = ${q}
+      ORDER BY (path = module_path) DESC, length(path), path LIMIT 60)
+    UNION ALL
+    (SELECT 'package', path, name, synopsis, version, 700
+      FROM packages WHERE lower(path) LIKE ${prefix} LIMIT 40)
+    UNION ALL
+    (SELECT 'package', path, name, synopsis, version, 600
+      FROM packages WHERE lower(name) LIKE ${prefix} LIMIT 40)
+    UNION ALL
+    (SELECT 'module', path, name, ''::text, version, 650
+      FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
   `;
+  let candidates = strict;
+  if (q.length >= 3 && (strict.length < 8 || q.includes(' '))) {
+    const broad = await prisma.$queryRaw<Candidate[]>`
+      (SELECT 'package'::text AS kind, path, name, synopsis, version, 400 AS score
+        FROM packages WHERE to_tsvector('english', synopsis) @@ plainto_tsquery('english', ${q}) LIMIT 80)
+      UNION ALL
+      (SELECT 'package', path, name, synopsis, version, 200
+        FROM packages WHERE lower(name) % ${q} LIMIT 40)
+    `;
+    candidates = [...strict, ...broad];
+  }
+  candidates.sort(
+    (a, b) =>
+      b.score +
+        (featured.has(b.path) ? 150 : 0) -
+        (a.score + (featured.has(a.path) ? 150 : 0)) ||
+      a.path.length - b.path.length ||
+      a.path.localeCompare(b.path)
+  );
+  const seen = new Set<string>();
+  const results = candidates
+    .filter((item) => {
+      if (seen.has(item.path)) return false;
+      seen.add(item.path);
+      return true;
+    })
+    .slice(0, 20)
+    .map(({ score: _score, ...item }) => item);
+  if (recent.size >= 200) recent.delete(recent.keys().next().value!);
+  recent.set(q, { at: Date.now(), results });
+  return results;
 }

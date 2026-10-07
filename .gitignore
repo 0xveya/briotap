@@ -12,3 +12,5 @@
 /generated/
 /.svelte-kit/
 /build/
+
+/data/ui-cache/
