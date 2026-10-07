@@ -7,6 +7,7 @@
   import Documentation from '$lib/components/Documentation.svelte';
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import { sourceBase } from '$lib/source-link';
   import SymbolIndex from '$lib/components/SymbolIndex.svelte';
   import DependencyList from '$lib/components/DependencyList.svelte';
   let { data }: { data: PageData } = $props();
@@ -404,7 +405,10 @@
               >({documentationData.symbols.length})</span
             >
           </h2>
-          <SymbolIndex symbols={documentationData.symbols} />
+          <SymbolIndex
+            symbols={documentationData.symbols}
+            sourceBase={sourceBase(pkg.path, pkg.modulePath, pkg.version)}
+          />
         </section>{:else}<section class="sidebar-block">
           <h2>MODULE PACKAGES</h2>
           {#each pkg.packages.slice(0, 8) as item}<a

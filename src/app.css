@@ -1918,3 +1918,34 @@ kbd,
 .reader-symbol-menu .virtual-symbols {
   max-height: min(336px, calc(100dvh - 330px));
 }
+.symbol-doc-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+.symbol-source {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.symbol-source:hover {
+  color: var(--pink);
+}
+.snippet-toolbar {
+  align-items: center;
+  gap: 8px;
+}
+.prose .snippet-toolbar a {
+  padding: 8px 12px;
+  font: 11px var(--mono);
+  color: var(--muted);
+  text-decoration: none;
+}

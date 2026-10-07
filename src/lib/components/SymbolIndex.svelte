@@ -14,8 +14,14 @@
   let {
     symbols,
     id = 'symbol-search',
-    onselect
-  }: { symbols: SymbolEntry[]; id?: string; onselect?: () => void } = $props();
+    onselect,
+    sourceBase
+  }: {
+    symbols: SymbolEntry[];
+    id?: string;
+    onselect?: () => void;
+    sourceBase: string;
+  } = $props();
   let filter = $state('');
   let viewport = $state<HTMLElement>();
   let kind = $state<SymbolKind>('all');
@@ -55,6 +61,15 @@
       event.preventDefault();
       focusResult(0);
     }
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault();
+      window.open(
+        `${sourceBase}&symbol=${encodeURIComponent(filtered[0]!.name)}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      return;
+    }
     if (event.key === 'Enter') {
       event.preventDefault();
       onselect?.();
@@ -70,6 +85,15 @@
     )
       return;
     const index = Number(event.target.dataset.index);
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault();
+      window.open(
+        `${sourceBase}&symbol=${encodeURIComponent(filtered[index]!.name)}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      return;
+    }
     if (event.key === 'ArrowUp' && index === 0) {
       event.preventDefault();
       document.getElementById(id)?.focus();
@@ -116,7 +140,8 @@
   <label><input type="checkbox" bind:checked={signatures} /> Signatures</label>
 </div>
 <p class="symbol-help" id={`${id}-help`}>
-  Name, receiver + method, or initials. ↓ to select, Enter to open.
+  Name, receiver + method, or initials. ↓ to select, Enter for docs, Shift+Enter
+  for source.
 </p>
 <p class="symbol-count" aria-live="polite">
   {filtered.length}
@@ -136,34 +161,46 @@
       {#each $virtualizer.getVirtualItems() as row (row.key)}
         {@const symbol = filtered[row.index]}
         {#if symbol}
-          <a
-            href="#{symbol.id}"
+          <div
             class="virtual-symbol"
             class:current={page.url.hash === `#${symbol.id}`}
-            aria-current={page.url.hash === `#${symbol.id}`
-              ? 'location'
-              : undefined}
-            onclick={onselect}
-            onkeydown={navigate}
-            title={symbol.signature}
-            data-index={row.index}
             style:transform="translateY({row.start}px)"
           >
-            <span class="symbol-kind"
-              >{symbol.kind === 'func'
-                ? symbol.name.includes('.')
-                  ? 'method'
-                  : 'func'
-                : symbol.kind}</span
+            <a
+              href="#{symbol.id}"
+              class="symbol-doc-link"
+              class:current={page.url.hash === `#${symbol.id}`}
+              aria-current={page.url.hash === `#${symbol.id}`
+                ? 'location'
+                : undefined}
+              onclick={onselect}
+              onkeydown={navigate}
+              title={symbol.signature}
+              data-index={row.index}
             >
-            <span class="symbol-detail"
-              ><strong
-                >{#each matchedName(symbol.name, filter) as part}{#if part.matched}<mark
-                      >{part.text}</mark
-                    >{:else}{part.text}{/if}{/each}</strong
-              ><small>{symbol.signature}</small></span
+              <span class="symbol-kind"
+                >{symbol.kind === 'func'
+                  ? symbol.name.includes('.')
+                    ? 'method'
+                    : 'func'
+                  : symbol.kind}</span
+              >
+              <span class="symbol-detail"
+                ><strong
+                  >{#each matchedName(symbol.name, filter) as part}{#if part.matched}<mark
+                        >{part.text}</mark
+                      >{:else}{part.text}{/if}{/each}</strong
+                ><small>{symbol.signature}</small></span
+              >
+            </a><a
+              class="symbol-source"
+              href="{sourceBase}&symbol={encodeURIComponent(symbol.name)}"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Source for {symbol.name}"
+              title="Source for {symbol.name}">↗</a
             >
-          </a>{/if}
+          </div>{/if}
       {/each}
     </div>
   </nav>

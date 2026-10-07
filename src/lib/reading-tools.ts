@@ -1,5 +1,8 @@
 /** Add copy controls and permalinks to sanitized documentation. */
-export function readingTools(node: HTMLElement, _html: string) {
+export function readingTools(
+  node: HTMLElement,
+  options: { html: string; sourceBase: string }
+) {
   const controls: HTMLElement[] = [];
   const timers = new Set<ReturnType<typeof setTimeout>>();
   function clear() {
@@ -40,6 +43,15 @@ export function readingTools(node: HTMLElement, _html: string) {
         }, 2000);
         timers.add(timer);
       };
+      const heading = pre.previousElementSibling;
+      if (heading?.id.startsWith('symbol-')) {
+        const source = document.createElement('a');
+        source.href = `${options.sourceBase}&symbol=${encodeURIComponent(heading.id.slice(7))}`;
+        source.textContent = 'Source ↗';
+        source.target = '_blank';
+        source.rel = 'noreferrer';
+        toolbar.append(source);
+      }
       toolbar.append(button);
       pre.before(toolbar);
       controls.push(toolbar);
@@ -47,7 +59,8 @@ export function readingTools(node: HTMLElement, _html: string) {
   }
   mount();
   return {
-    update(_html: string) {
+    update(next: { html: string; sourceBase: string }) {
+      options = next;
       clear();
       mount();
     },

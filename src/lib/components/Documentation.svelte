@@ -10,6 +10,7 @@
   import type { documentation } from '$lib/server/documentation';
   import { highlightSnippets } from '$lib/highlight';
   import { readingTools } from '$lib/reading-tools';
+  import { sourceBase } from '$lib/source-link';
   import SymbolIndex from './SymbolIndex.svelte';
   let {
     path,
@@ -139,6 +140,7 @@
           <div class="reader-symbol-menu" hidden={!symbolsOpen}>
             <SymbolIndex
               symbols={result.data.symbols}
+              sourceBase={sourceBase(path, result.data.modulePath, version)}
               id="reader-symbol-search"
               onselect={() => (symbolsOpen = false)}
             />
@@ -163,7 +165,10 @@
         class:wrap-code={wrapCode}
         data-documentation
         use:highlightSnippets={renderedHtml}
-        use:readingTools={renderedHtml}
+        use:readingTools={{
+          html: renderedHtml,
+          sourceBase: sourceBase(path, result.data.modulePath, version)
+        }}
       >
         {@html renderedHtml}
       </div>
