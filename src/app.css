@@ -238,6 +238,8 @@ kbd {
 .search-form input::placeholder {
   color: #aaa4ae;
 }
+.search-shortcut { padding: 0; border: 0; flex-shrink: 0; }
+.search-shortcut kbd { white-space: nowrap; }
 .large .search-form {
   height: 62px;
   padding: 8px 9px 8px 20px;
@@ -1293,6 +1295,7 @@ kbd {
   .header-inner kbd {
     display: none;
   }
+  .header-inner .search-shortcut { display: none; }
   .header-inner:has(.search-container) nav {
     display: none;
   }

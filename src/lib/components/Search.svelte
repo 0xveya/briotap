@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
   import { searchPackages } from '../../routes/index.remote';
@@ -14,6 +15,15 @@
   let input: HTMLInputElement;
   let selected = $state(-1);
   let request = 0;
+  let shortcutLabel = $state('Ctrl K');
+  onMount(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) shortcutLabel = '⌘ K';
+  });
+  function focusSearch() {
+    input.focus();
+    input.select();
+    open = true;
+  }
   $effect(() => {
     text = value;
   });
@@ -45,17 +55,20 @@
     return () => clearTimeout(timer);
   });
   function shortcut(event: KeyboardEvent) {
+    if (event.defaultPrevented || event.isComposing) return;
     if (
       (event.key === '/' &&
+        !event.ctrlKey && !event.metaKey && !event.altKey &&
         !(
           event.target instanceof HTMLInputElement ||
-          event.target instanceof HTMLTextAreaElement
+          event.target instanceof HTMLTextAreaElement ||
+          event.target instanceof HTMLSelectElement ||
+          (event.target instanceof HTMLElement && event.target.isContentEditable)
         )) ||
-      ((event.ctrlKey || event.metaKey) && event.key === 'k')
+      ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k')
     ) {
       event.preventDefault();
-      input?.focus();
-      open = true;
+      focusSearch();
     }
   }
   function keydown(event: KeyboardEvent) {
@@ -115,12 +128,13 @@
       autocomplete="off"
       spellcheck="false"
       aria-label="Search Go packages"
+      aria-keyshortcuts="Control+k Meta+k /"
       placeholder={large ? 'Search Go packages…' : 'Search packages…'}
       aria-controls={large ? 'hero-results' : 'header-results'}
     />
     {#if large}<button class="search-submit" type="submit"
         >Search <Icon name="arrow" size={16} /></button
-      >{:else}<kbd>/</kbd>{/if}
+      >{:else}<button type="button" class="search-shortcut" onclick={focusSearch} aria-label="Focus package search" title={`Search packages (${shortcutLabel})`}><kbd>{shortcutLabel}</kbd></button>{/if}
   </form>
   {#if open && text.trim()}
     <div class="search-results" id={large ? 'hero-results' : 'header-results'}>

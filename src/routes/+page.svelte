@@ -27,7 +27,7 @@
       <Search large />
       <div class="search-hint">
         <span>Search by name, description, or import path.</span><span
-          ><kbd>/</kbd> to search</span
+          ><kbd>Ctrl K</kbd> / <kbd>⌘ K</kbd> to search</span
         >
       </div>
     </div>
