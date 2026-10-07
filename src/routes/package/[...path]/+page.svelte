@@ -248,7 +248,7 @@
           </div>{:then details}
           {#if tab === 'versions'}<div class="list-heading">
               <h2>Version history</h2>
-              <span>Latest 30 releases</span>
+              <span>Recent versions</span>
             </div>
             <p class="tab-intro">
               Versions reported by pkg.go.dev. Select a version to read its
@@ -260,14 +260,14 @@
                     ><span
                       >{item.version}
                       {#if item.version === data.latestVersion}<span
-                          class="release-label">latest</span
+                          class="release-label">indexed</span
                         >{/if}{#if item.retracted}<span class="release-label"
                           >retracted</span
                         >{/if}</span
                     ><small>{date(item.commitTime)}</small></a
                   >{/each}
               </div>{:else}<div class="notice">
-                Version metadata is unavailable from the upstream source.
+                Version history unavailable.
               </div>{/if}
           {:else if tab === 'imported-by'}<div class="list-heading">
               <h2>Imported by</h2>
@@ -290,7 +290,7 @@
                   rel="noreferrer">See all importing packages on pkg.go.dev ↗</a
                 >
               </div>{:else}<div class="notice">
-                Importing packages are unavailable from the upstream source.
+                Importing packages unavailable.
               </div>{/if}
           {:else if tab === 'dependencies'}<div class="list-heading">
               <h2>Module dependencies</h2>
@@ -369,10 +369,6 @@
             >{formatNumber(info.current?.project?.openIssuesCount)}</strong
           >
         </div>
-        <p class="sidebar-note">
-          Public package imports and repository activity. Unavailable metrics
-          appear as —.
-        </p>
       </section>
       <section class="sidebar-block">
         <h2>LINKS</h2>

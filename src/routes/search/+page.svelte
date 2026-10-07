@@ -14,20 +14,16 @@
   {#if data.q}<div class="results-meta">
       <span
         >{data.results.length}{data.results.length === 20 ? '+' : ''} matches</span
-      ><span>{data.milliseconds} ms</span>
+      >
     </div>
     <div class="result-list">
       {#each data.results as result}<a
           class="result-row"
           href="/package/{result.path}"
-          ><div class="result-icon"><Icon name="package" size={22} /></div>
-          <div>
+          ><div class="result-detail">
             <h2>{result.name}<span>{result.version}</span></h2>
             <code>{result.path}</code>
-            <p>
-              {result.synopsis ||
-                'Module'}
-            </p>
+            {#if result.synopsis}<p>{result.synopsis}</p>{/if}
           </div>
           <Icon name="arrow" size={20} /></a
         >{/each}
@@ -35,10 +31,7 @@
     {#if !data.results.length}<div class="empty-state">
         <Icon name="search" size={36} />
         <h2>No packages found.</h2>
-        <p>
-          Try a shorter name, a description, or an exact import path. The index
-          is still growing.
-        </p>
+        <p>Try a package name, description, or import path.</p>
         <a href="/">Browse packages <Icon name="arrow" size={16} /></a>
       </div>{/if}
   {:else}<p class="search-intro">

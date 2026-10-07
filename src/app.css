@@ -232,7 +232,7 @@ kbd {
   background: transparent;
   border: 0;
   height: 100%;
-  font-size: 13px;
+  font-size: 15px;
   color: #eae8ec;
 }
 .search-form input::placeholder {
@@ -461,15 +461,15 @@ kbd {
   border-radius: 6px;
   z-index: 30;
   box-shadow: 0 20px 60px #000a;
-  overflow: hidden;
+  max-height: min(480px, 65dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .search-caption {
   display: flex;
   justify-content: space-between;
   padding: 14px 16px;
-  font: 10px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12px;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
 }
@@ -490,16 +490,15 @@ kbd {
 }
 .search-results strong {
   display: block;
-  font: 500 13px var(--mono);
+  font: 500 15px var(--mono);
+  line-height: 1.4;
   margin-bottom: 4px;
 }
 .search-results small {
   display: block;
-  font: 9px var(--mono);
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font: 12px/1.5 var(--mono);
+  color: #bbb4c0;
+  overflow-wrap: anywhere;
 }
 .search-results > a > svg:last-child {
   margin-left: auto;
@@ -550,7 +549,7 @@ kbd {
   border-radius: 7px;
   padding: 12px;
 }
-.result-row > div:nth-child(2) {
+.result-row > .result-detail {
   flex: 1;
   min-width: 0;
 }
@@ -564,21 +563,24 @@ kbd {
   display: flex;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
 }
 .result-row h2 span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .result-row code {
-  font-size: 10px;
-  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #bbb4c0;
   overflow-wrap: anywhere;
 }
 .result-row p {
-  font-size: 13px;
+  font-size: 15px;
   color: #c5bec9;
   line-height: 1.7;
   margin: 10px 0 0;
@@ -1048,13 +1050,13 @@ kbd {
   margin: 8px 0 0;
 }
 .symbol-search {
-  height: 34px;
+  height: 40px;
   width: 100%;
   background: #151117;
   border: 1px solid #453440;
   border-radius: 4px;
   padding: 0 10px;
-  font: 10px var(--mono);
+  font: 14px var(--mono);
   margin-bottom: 15px;
 }
 .symbol-list {
@@ -1283,7 +1285,7 @@ kbd {
     gap: 7px;
   }
   .header-inner .search-form input {
-    font-size: 11px;
+    font-size: 16px;
   }
   .header-inner kbd {
     display: none;
@@ -1297,7 +1299,7 @@ kbd {
     gap: 10px;
   }
   .large .search-form input {
-    font-size: 12px;
+    font-size: 16px;
   }
   .large .search-form > svg {
     width: 18px;
@@ -1409,22 +1411,22 @@ kbd {
     height: 18px;
   }
   .result-row h2 {
-    font-size: 14px;
+    font-size: 17px;
     gap: 8px;
     flex-wrap: wrap;
   }
   .result-row h2 span {
-    font-size: 9px;
+    font-size: 12px;
     max-width: 130px;
   }
   .result-row code {
-    font-size: 9px;
+    font-size: 13px;
   }
   .result-row p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .results-meta {
-    font-size: 9px;
+    font-size: 12px;
   }
   .topic-links {
     gap: 10px;
@@ -1820,6 +1822,9 @@ kbd,
   .prose pre {
     font-size: 12px;
   }
+  .symbol-search {
+    font-size: 16px;
+  }
 }
 .symbol-controls {
   display: flex;
@@ -1855,11 +1860,12 @@ kbd,
   height: 56px;
   gap: 8px;
   border-bottom: 1px solid var(--line);
+  font-size: 13px;
 }
 .virtual-symbol .symbol-kind {
-  width: 38px;
+  width: 42px;
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: 10px;
 }
 .symbol-detail {
   min-width: 0;
@@ -1871,12 +1877,15 @@ kbd,
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 400;
+  white-space: nowrap;
+  color: #eae8ec;
 }
 .symbol-detail small {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 9px;
-  opacity: 0.75;
+  font-size: 11px;
+  white-space: nowrap;
+  color: #bbb4c0;
 }
 .symbol-detail mark {
   color: var(--pink);

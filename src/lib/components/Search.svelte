@@ -72,6 +72,10 @@
       );
       if (selected >= 0 && results[selected])
         void prefetchLink(`/package/${results[selected]!.path}`);
+      input
+        .closest('.search-container')
+        ?.querySelectorAll<HTMLAnchorElement>('.search-results > a')
+        [selected]?.scrollIntoView({ block: 'nearest' });
     }
     if (event.key === 'Enter' && selected >= 0 && results[selected]) {
       event.preventDefault();
@@ -121,23 +125,30 @@
     <div class="search-results" id={large ? 'hero-results' : 'header-results'}>
       <div class="search-caption">
         {loading
-          ? 'Searching the local index…'
+          ? 'Searching…'
           : failed
             ? 'Search unavailable. Try again.'
-            : 'Packages'} <span>{results.length ? 'Enter to open' : ''}</span>
+            : 'Packages'}
+        <span
+          >{results.length
+            ? selected >= 0
+              ? 'Enter to open'
+              : '↓ to select'
+            : ''}</span
+        >
       </div>
       {#each results as result, index}
         <a
           class:active={selected === index}
           href="/package/{result.path}"
           onclick={() => (open = false)}
-          ><Icon name="package" size={17} /><span
+          ><span
             ><strong>{result.name}</strong><small>{result.path}</small></span
           ><Icon name="arrow" size={15} /></a
         >
       {/each}
       {#if !loading && !failed && !results.length}<p class="search-empty">
-          No matches yet. Try a name or an import path.
+          No packages found. Try a name or an import path.
         </p>{/if}
       <a
         class="all-results"
