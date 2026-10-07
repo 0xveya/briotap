@@ -3,6 +3,7 @@
   import type { Snippet } from 'svelte';
   import Search from '$lib/components/Search.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import { prefetchOnIntent } from '$lib/prefetch';
   import '../app.css';
   let { children }: { children: Snippet } = $props();
@@ -33,6 +34,7 @@
         rel="noreferrer">GitHub <Icon name="external" size={13} /></a
       >
     </nav>
+    <ThemeToggle />
   </div>
 </header>
 <main id="main" use:prefetchOnIntent>{@render children()}</main>

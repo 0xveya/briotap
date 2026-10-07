@@ -8,7 +8,7 @@ const highlighter = createHighlighterCore({
   langs: [go],
   themes: [
     {
-      name: 'briotap',
+      name: 'briotap-dark',
       type: 'dark',
       colors: {
         'editor.background': '#131116',
@@ -34,6 +34,34 @@ const highlighter = createHighlighterCore({
           settings: { foreground: '#a2cddd' }
         }
       ]
+    },
+    {
+      name: 'briotap-light',
+      type: 'light',
+      colors: {
+        'editor.background': '#f6f1f4',
+        'editor.foreground': '#39323e'
+      },
+      tokenColors: [
+        { scope: ['comment'], settings: { foreground: '#6b6170' } },
+        {
+          scope: ['keyword', 'storage.type', 'storage.modifier'],
+          settings: { foreground: '#a61755' }
+        },
+        { scope: ['string'], settings: { foreground: '#24673a' } },
+        {
+          scope: ['entity.name.function', 'support.function'],
+          settings: { foreground: '#6f3e91' }
+        },
+        {
+          scope: ['constant.numeric', 'constant.language'],
+          settings: { foreground: '#87501e' }
+        },
+        {
+          scope: ['entity.name.type', 'support.type'],
+          settings: { foreground: '#235e78' }
+        }
+      ]
     }
   ]
 });
@@ -43,7 +71,8 @@ self.onmessage = async (event: MessageEvent<HighlightRequest>) => {
   try {
     const html = (await highlighter).codeToHtml(code, {
       lang: 'go',
-      theme: 'briotap'
+      themes: { dark: 'briotap-dark', light: 'briotap-light' },
+      defaultColor: false
     });
     const response: HighlightResponse = { id, html };
     self.postMessage(response);
