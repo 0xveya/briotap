@@ -1,7 +1,10 @@
 import { parseHTML } from 'linkedom';
 import sanitize from 'sanitize-html';
 import * as v from 'valibot';
-import { cached, fetchJson, pkgUrl } from './cache';
+import { cached, cachedSnapshot, fetchJson, pkgUrl } from './cache';
+import { prisma } from './prisma';
+import { documentationLink } from './documentation-links';
+import { documentContents, documentFragment } from '../document-contents';
 
 const schema = v.object({
   path: v.string(),
@@ -17,6 +20,7 @@ const schema = v.object({
 const renderedSchema = v.object({
   ...v.omit(schema, ['docs']).entries,
   html: v.string(),
+  headings: v.array(v.object({ id: v.string(), name: v.string(), level: v.number() })),
   symbols: v.array(
     v.object({
       id: v.string(),
@@ -30,9 +34,13 @@ const renderedSchema = v.object({
   )
 });
 
+export function documentationSnapshot(path: string, version: string) {
+  return cachedSnapshot(`rendered-docs:v6:${path}@${version}`, renderedSchema);
+}
+
 export async function documentation(path: string, version: string) {
   return cached(
-    `rendered-docs:v4:${path}@${version}`,
+    `rendered-docs:v6:${path}@${version}`,
     renderedSchema,
     async () => renderDocumentation(path, version)
   );
@@ -63,9 +71,6 @@ async function renderDocumentation(path: string, version: string) {
   }[] = [];
   const aliases = new Map<string, string[]>();
   document.querySelector('h1')?.remove();
-  for (const heading of document.querySelectorAll('h2')) {
-    heading.id = `section-${(heading.textContent ?? '').toLowerCase()}`;
-  }
   for (const pre of document.querySelectorAll('pre')) {
     pre.textContent = (pre.textContent ?? '').replace(
       /^(?:[ \t]*\r?\n)+|(?:\r?\n[ \t]*)+$/g,
@@ -99,7 +104,7 @@ async function renderDocumentation(path: string, version: string) {
     if (!declarations.length) continue;
     const heading = document.createElement('h3');
     heading.id = `symbol-${declarations[0]!.name}`;
-    heading.textContent = declarations.map((item) => item.name).join(', ');
+    heading.textContent = declarations.length === 1 ? declarations[0]!.name : `${declarations[0]!.name} (${declarations.length} declarations)`;
     aliases.set(
       heading.id,
       declarations.slice(1).map((item) => `symbol-${item.name}`)
@@ -121,17 +126,32 @@ async function renderDocumentation(path: string, version: string) {
     }
   }
 
+  const contents = documentContents(document.querySelectorAll('h2, h3, h4, h5, h6'), 'section');
+  const links = [...document.querySelectorAll('a[href]')].flatMap((anchor) => {
+    const href = anchor.getAttribute('href') ?? '';
+    if (!href.startsWith('/') && !href.startsWith('https://pkg.go.dev/')) return [];
+    const link = documentationLink(href);
+    return link ? [{ anchor, link }] : [];
+  });
+  const paths = [...new Set(links.flatMap(({ link }) => link.path ? [link.path] : []))];
+  const indexed = paths.length
+    ? await prisma.package.findMany({ where: { path: { in: paths } }, select: { path: true } })
+    : [];
+  const available = new Set([path, ...indexed.map((pkg) => pkg.path)]);
+  for (const { anchor, link } of links)
+    anchor.setAttribute('href', link.path && available.has(link.path) ? link.local! : link.external);
   for (const anchor of document.querySelectorAll('a[href]')) {
     const href = anchor.getAttribute('href') ?? '';
+    const fragment = documentFragment(href);
     if (
       href.startsWith('#') &&
-      symbols.some((symbol) => symbol.name === href.slice(1))
+      symbols.some((symbol) => symbol.name === fragment)
     )
-      anchor.setAttribute('href', `#symbol-${href.slice(1)}`);
-    else if (href.startsWith('https://pkg.go.dev/'))
-      anchor.setAttribute('href', `/package/${href.slice(19)}`);
-    else if (href.startsWith('/'))
-      anchor.setAttribute('href', `/package${href}`);
+      anchor.setAttribute('href', `#symbol-${fragment}`);
+    else if (href.startsWith('#')) {
+      const target = contents.aliases.get(fragment) ?? contents.aliases.get(fragment.toLowerCase());
+      if (target) anchor.setAttribute('href', `#${target}`);
+    }
   }
   const html = sanitize(document.body.innerHTML, {
     allowedTags: [
@@ -142,6 +162,8 @@ async function renderDocumentation(path: string, version: string) {
       'h2',
       'h3',
       'h4',
+      'h5',
+      'h6',
       'ul',
       'ol',
       'li',
@@ -161,7 +183,9 @@ async function renderDocumentation(path: string, version: string) {
       a: ['href', 'title', 'id'],
       h2: ['id'],
       h3: ['id'],
-      h4: ['id']
+      h4: ['id'],
+      h5: ['id'],
+      h6: ['id']
     },
     allowedSchemes: ['http', 'https', 'mailto']
   });
@@ -179,8 +203,10 @@ async function renderDocumentation(path: string, version: string) {
           boundaries[index + 1]?.index ?? html.length
         )
       });
+      const section = sections.at(-1)!;
+      section.aliases = [...new Set([...section.aliases, ...[...section.html.matchAll(/<(?:h[2-6]|a)\b[^>]*\bid="([^"]+)"/g)].map((entry) => entry[1]!)])].filter((id) => id !== section.id);
     }
   }
   const { docs: _docs, ...metadata } = raw;
-  return { ...metadata, html: intro, symbols, sections };
+  return { ...metadata, html: intro, headings: contents.headings, symbols, sections };
 }

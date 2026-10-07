@@ -7,13 +7,17 @@
   import PackageCode from '$lib/components/PackageCode.svelte';
   import PackageChangelog from '$lib/components/PackageChangelog.svelte';
   import PackageStats from '$lib/components/PackageStats.svelte';
+  import SocketScore from '$lib/components/SocketScore.svelte';
   import Documentation from '$lib/components/Documentation.svelte';
+  import Readme from '$lib/components/Readme.svelte';
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
   import DependencyList from '$lib/components/DependencyList.svelte';
+  import Dialog from '$lib/components/Dialog.svelte';
   import VersionPicker from '$lib/components/VersionPicker.svelte';
   import RepositoryIcon from '$lib/components/RepositoryIcon.svelte';
   import { goDocsUrl } from '$lib/go-docs';
+  import { repositoryMetrics } from '$lib/repository-links';
   let { data }: { data: PageData } = $props();
   const pkg = $derived(data.pkg);
   const tabs = [
@@ -46,20 +50,9 @@
     loadedDocumentation?.path === pkg.path &&
       loadedDocumentation.version === pkg.version
       ? loadedDocumentation
-      : null
+      : data.documentation
   );
-  const releaseVersion = $derived(pkg.version.split('+')[0]!);
-  const versionStatus = $derived(
-    /^v\d+\.\d+\.\d+-.*\d{14}-[a-f0-9]+$/.test(releaseVersion)
-      ? 'Pseudo-version'
-      : /^v\d+\.\d+\.\d+[-]/.test(releaseVersion)
-        ? 'Prerelease'
-        : /^v[1-9]\d*\.\d+\.\d+$/.test(releaseVersion)
-          ? 'Stable release'
-          : /^v0\.\d+\.\d+$/.test(releaseVersion)
-            ? 'Tagged release · v0'
-            : 'Untagged version'
-  );
+  const metricLinks = $derived(repositoryMetrics(pkg.repoUrl));
   const install = $derived(`go get ${pkg.path}@${pkg.version}`);
   const formatNumber = (value: number | undefined | null) =>
     value == null ? '—' : new Intl.NumberFormat('en').format(value);
@@ -71,6 +64,20 @@
           year: 'numeric'
         })
       : 'Unavailable';
+  let Graph = $state<typeof import('$lib/components/DependencyGraph.svelte').default>();
+  let graphImport: Promise<void> | undefined;
+  let graphError = $state('');
+  function prepareGraph() {
+    if (!Graph && !graphImport) {
+      graphError = '';
+      graphImport = import('$lib/components/DependencyGraph.svelte').then((module) => { Graph = module.default; }).catch(() => { graphError = 'The explorer could not be loaded.'; graphImport = undefined; });
+    }
+    void Promise.resolve(info).catch(() => {});
+  }
+  function openGraph() { prepareGraph(); graphOpen = true; }
+  let graphOpen = $state(false);
+  let graphVisited = $state(false);
+  $effect(() => { if (graphOpen) graphVisited = true; });
   let tabNavigation = $state<HTMLElement>();
   $effect(() => {
     void tab;
@@ -160,6 +167,10 @@
         {#if tab === 'overview'}<p class="synopsis">
             {pkg.synopsis || pkg.path}
           </p>{/if}
+        {#if pkg.version !== data.latestVersion}<p class="tab-intro">
+            Package name and synopsis are indexed at {data.latestVersion}.
+            Documentation and version details below use {pkg.version}.
+          </p>{/if}
         {#if tab === 'overview'}<div class="repo-links">
             {#if pkg.repoUrl}<a
                 href={pkg.repoUrl}
@@ -170,19 +181,13 @@
                   ''
                 )}
                 <Icon name="external" size={12} /></a
-              >{/if}<span
-              ><Icon name="star" size={14} />{formatNumber(
-                info.current?.project?.starsCount
-              )}</span
-            >{#if pkg.repoUrl?.startsWith('https://github.com/')}<a
-                href="{pkg.repoUrl}/issues"
-                target="_blank"
-                rel="noreferrer">Issues <Icon name="external" size={12} /></a
-              >{/if}<a
+              >{/if}{#if metricLinks}<a href={metricLinks.stars} target="_blank" rel="noreferrer" aria-label="Repository stars"><Icon name="star" size={14} />{formatNumber(info.current?.project?.starsCount)}</a>
+              <a href={metricLinks.issues} target="_blank" rel="noreferrer">Issues <Icon name="external" size={12} /></a>              {/if}<a
               href={goDocsUrl(pkg.path, pkg.modulePath, pkg.version)}
               target="_blank"
               rel="noreferrer">pkg.go.dev <Icon name="external" size={12} /></a
             >
+            <SocketScore modulePath={pkg.modulePath} version={pkg.version} />
           </div>
         {/if}
         {#if tab === 'overview'}<div class="metadata-strip">
@@ -210,7 +215,7 @@
               <span><a href="https://deps.dev/go/{encodeURIComponent(pkg.modulePath)}/{pkg.version}" target="_blank" rel="noreferrer" title="Advisories reported by deps.dev for this module version">Known advisories ↗</a></span><strong
                 >{info.current?.metadata
                   ? info.current.metadata.advisoryKeys.length === 0
-                    ? 'None reported'
+                    ? '0 reported'
                     : `${info.current.metadata.advisoryKeys.length} reported`
                   : '—'}</strong
               >
@@ -236,12 +241,15 @@
             <span>$</span><code>{install}</code><Copy text={install} />
           </div>
         {/if}
-        {#key `${pkg.path}@${pkg.version}`}<Documentation
+        {#if tab === 'overview'}
+          {#key `${pkg.modulePath}@${pkg.version}`}<Readme path={pkg.path} modulePath={pkg.modulePath} version={pkg.version} />{/key}
+        {:else}{#key `${pkg.path}@${pkg.version}`}<Documentation
+          initial={data.documentation}
             path={pkg.path}
             modulePath={pkg.modulePath}
             version={pkg.version}
             onloaded={(value) => (loadedDocumentation = value)}
-          />{/key}
+          />{/key}{/if}
       {:else if tab === 'code'}
         {#key `${pkg.path}@${pkg.version}`}<PackageCode path={pkg.path} modulePath={pkg.modulePath} version={pkg.version} />{/key}
       {:else if tab === 'changelog'}
@@ -253,10 +261,7 @@
             >{pkg.packages.length}{pkg.packages.length === 100 ? '+' : ''} indexed</span
           >
         </div>
-        <p class="tab-intro">
-          Packages indexed at {data.latestVersion}. Select a package to read its
-          API.
-        </p>
+        {#if pkg.version !== data.latestVersion}<p class="tab-intro">Package list for {data.latestVersion}.</p>{/if}
         <div class="compact-list">
           {#each pkg.packages as item}<div class="package-list-item">
               <a
@@ -287,10 +292,7 @@
               <h2>Version history</h2>
               <span>Recent versions</span>
             </div>
-            <p class="tab-intro">
-              Versions reported by pkg.go.dev. Select a version to read its
-              documentation.
-            </p>
+
             {#if details.versions}<div class="compact-list">
                 {#each details.versions as item}<a
                     href="/package/{pkg.path}?version={item.version}&tab=docs"
@@ -308,7 +310,7 @@
               </div>{/if}
           {:else if tab === 'timeline'}
             <div class="list-heading"><h2>Timeline</h2><span>{details.versions?.length ?? '—'} recent versions</span></div>
-            <p class="tab-intro">Module releases recorded by pkg.go.dev, newest dated releases first. Showing up to 30 versions.</p>
+            
             {#if details.versions?.length}
               <ol class="release-timeline">
                 {#each [...details.versions].sort((a, b) => (b.commitTime ?? '').localeCompare(a.commitTime ?? '')) as release}
@@ -321,14 +323,13 @@
               </ol>
             {:else}<div class="notice">Version history unavailable.</div>{/if}
           {:else if tab === 'stats'}
-            <PackageStats {details} />
+            <PackageStats {details} path={pkg.path} repoUrl={pkg.repoUrl} modulePath={pkg.modulePath} version={pkg.version} />
           {:else if tab === 'imported-by'}<div class="list-heading">
               <h2>Imported by</h2>
               <span>{formatNumber(details.importedBy?.total)} packages</span>
             </div>
             <p class="tab-intro">
-              Public package imports recorded by pkg.go.dev, across versions.
-              Showing up to 40 packages.
+              Across all versions · Up to 40 packages
             </p>
             {#if details.importedBy}<div class="compact-list">
                 {#each details.importedBy.items as item}<a
@@ -349,18 +350,16 @@
               <h2>Module dependencies</h2>
               <span>{details.requirements?.length ?? '—'} requirements</span>
             </div>
-            <p class="tab-intro">
-              Requirements from go.mod, provided by deps.dev.
-            </p>
-            {#if details.requirements}<DependencyList
+
+            {#if details.requirements}
+              <button type="button" class="graph-launch" onpointerenter={prepareGraph} onfocus={prepareGraph} ontouchstart={prepareGraph} onclick={openGraph}><Icon name="network" size={18} /> Explore dependency graph</button>
+              <DependencyList
                 requirements={details.requirements}
               />{:else}<div class="notice">
                 Module requirements are unavailable from deps.dev.
               </div>{/if}
             <div class="list-heading" id="package-imports"><h2>Package imports</h2></div>
-            <p class="tab-intro">
-              Direct imports used by this package in its default build context.
-            </p>
+
             {#await getDocumentation( { path: pkg.path, version: pkg.version } )}<div
                 class="skeleton"
               >
@@ -382,25 +381,12 @@
           {/if}
         {/await}
       {/if}
-      <div class="source-note">
-        Documentation and import data: <a
-          href="https://pkg.go.dev/{pkg.path}"
-          target="_blank"
-          rel="noreferrer">pkg.go.dev</a
-        >. Licenses, advisories, requirements and repository metrics:
-        <a
-          href="https://deps.dev/go/{encodeURIComponent(
-            pkg.modulePath
-          )}/{pkg.version}"
-          target="_blank"
-          rel="noreferrer">deps.dev</a
-        >. Cached locally; upstream snapshots may lag. “None reported” is not a
-        security assessment.
-      </div>
+
     </div>
     <aside class="package-sidebar" aria-label="Package insights">
       <section class="sidebar-block package-details">
-        <h2>Details</h2>
+<h2>Details</h2>
+        <button type="button" class="sidebar-symbol-trigger graph-sidebar-trigger" onpointerenter={prepareGraph} onfocus={prepareGraph} ontouchstart={prepareGraph} onclick={openGraph}><Icon name="network" size={16} /> Dependency graph</button>
         <dl class="package-facts">
           <div><dt>License</dt><dd>
             {#if info.current?.metadata?.licenses?.length}
@@ -409,14 +395,15 @@
               {/each}
             {:else}{info.current ? 'Unavailable' : 'Loading…'}{/if}
           </dd></div>
-          <div><dt>Version</dt><dd>{versionStatus}</dd></div>
-          {#if documentationData}<div><dt>Redistributable</dt><dd>{documentationData.isRedistributable ? 'Yes' : 'No'}</dd></div>{/if}
+          <div><dt>Version</dt><dd><a href={tabUrl('versions')}>{pkg.version}</a></dd></div>
+          {#if pkg.version !== data.latestVersion}<div><dt>Latest indexed</dt><dd><a href="/package/{pkg.path}?version={encodeURIComponent(data.latestVersion)}&tab={tab}">{data.latestVersion}</a></dd></div>{/if}
+          {#if tab === 'docs'}<div><dt>Redistributable</dt><dd>{documentationData ? (documentationData.isRedistributable ? 'Yes' : 'No') : '—'}</dd></div>{/if}
         </dl>
       </section>
-      {#if documentationData && (tab === 'overview' || tab === 'docs')}<section class="sidebar-block">
-          <a class="sidebar-symbol-trigger" href="{tabUrl('docs')}&find=symbols" aria-keyshortcuts="Alt+s">
-            <Icon name="search" size={16} /> Find symbol
-            <span>{formatNumber(documentationData.symbols.length)}</span><kbd>Alt S</kbd>
+      {#if tab === 'overview' || tab === 'docs'}<section class="sidebar-block">
+          <a class="sidebar-symbol-trigger" href="{tabUrl(tab)}&find=contents" aria-keyshortcuts="Alt+s">
+            <Icon name="search" size={16} /> Contents
+            {#if tab === 'docs'}<span>{formatNumber(documentationData ? documentationData.symbols.length + documentationData.headings.length : null)}</span>{/if}<kbd>Alt S</kbd>
           </a>
         </section>{:else}<section class="sidebar-block">
           <h2>Module packages</h2>
@@ -436,22 +423,22 @@
         <h2>Metrics</h2>
         <div class="side-stat">
           <span>Imported by</span><strong
-            >{formatNumber(info.current?.importedBy?.total)}</strong
+            ><a href={tabUrl('imported-by')}>{formatNumber(info.current?.importedBy?.total)}</a></strong
           >
         </div>
         <div class="side-stat">
           <span>Repository stars</span><strong
-            >{formatNumber(info.current?.project?.starsCount)}</strong
+            >{#if metricLinks}<a href={metricLinks.stars} target="_blank" rel="noreferrer">{formatNumber(info.current?.project?.starsCount)}</a>{:else}{formatNumber(info.current?.project?.starsCount)}{/if}</strong
           >
         </div>
         <div class="side-stat">
           <span>Forks</span><strong
-            >{formatNumber(info.current?.project?.forksCount)}</strong
+            >{#if metricLinks}<a href={metricLinks.forks} target="_blank" rel="noreferrer">{formatNumber(info.current?.project?.forksCount)}</a>{:else}{formatNumber(info.current?.project?.forksCount)}{/if}</strong
           >
         </div>
         <div class="side-stat">
           <span>Open issues</span><strong
-            >{formatNumber(info.current?.project?.openIssuesCount)}</strong
+            >{#if metricLinks}<a href={metricLinks.issues} target="_blank" rel="noreferrer">{formatNumber(info.current?.project?.openIssuesCount)}</a>{:else}{formatNumber(info.current?.project?.openIssuesCount)}{/if}</strong
           >
         </div>
       </section>
@@ -476,8 +463,26 @@
             rel="noreferrer"
             >Open Source Insights <Icon name="external" size={12} /></a
           >
+          <a
+            href="https://socket.dev/go/package/{pkg.modulePath.split('/').map(encodeURIComponent).join('/')}?version={encodeURIComponent(pkg.version)}"
+            target="_blank"
+            rel="noreferrer"
+            >View on Socket <Icon name="external" size={12} /></a
+          >
         </div>
       </section>
     </aside>
   </div>
 </div>
+
+<Dialog bind:open={graphOpen} title="Dependency graph" wide>
+  {#if graphVisited && Graph}
+    {#await info}<p role="status">Loading module requirements…</p>
+    {:then details}
+      {#if details.requirements}
+        {#key `${pkg.modulePath}@${pkg.version}`}<Graph onNavigate={() => graphOpen = false} modulePath={pkg.modulePath} version={pkg.version} requirements={details.requirements} />{/key}
+      {:else}<div class="notice">Module requirements are unavailable. <a href="https://deps.dev/go/{encodeURIComponent(pkg.modulePath)}/{encodeURIComponent(pkg.version)}" target="_blank" rel="noreferrer">Open deps.dev ↗</a></div>{/if}
+    {/await}
+  {:else if graphError}<div class="notice">{graphError} <button onclick={prepareGraph}>Retry</button></div>
+  {:else if graphVisited}<p role="status">Loading dependency explorer…</p>{/if}
+</Dialog>

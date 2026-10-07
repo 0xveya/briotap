@@ -2,6 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
+  import { navigating } from '$app/state';
   import { searchPackages } from '../../routes/index.remote';
   import type { SearchResult } from '$lib/server/search';
   import Icon from './Icon.svelte';
@@ -17,6 +18,8 @@
   let selected = $state(-1);
   let request = 0;
   let shortcutLabel = $state('Ctrl K');
+  const submitting = $derived(navigating.to?.url.pathname === '/search' &&
+    (navigating.to.url.searchParams.get('q') ?? '').trim() === text.trim());
   onMount(() => {
     if (/Mac|iPhone|iPad/.test(navigator.platform)) shortcutLabel = '⌘ K';
     if (document.activeElement === input && input.value.trim()) open = true;
@@ -44,21 +47,29 @@
     }
     loading = true;
     results = [];
-    const timer = setTimeout(async () => {
-      try {
-        const found = await searchPackages(q.slice(0, 200));
-        if (current === request) results = found.slice(0, 6);
-      } catch {
-        if (current === request) {
-          failed = true;
-          results = [];
-        }
-      } finally {
-        if (current === request) loading = false;
-      }
-    }, 140);
+    const timer = setTimeout(() => void loadResults(q, current), 140);
     return () => clearTimeout(timer);
   });
+  async function loadResults(q: string, current: number, refresh = false) {
+    try {
+      const resource = searchPackages(q.slice(0, 200));
+      if (refresh) resource.refresh();
+      const found = await resource;
+      if (current === request) results = found.slice(0, 6);
+    } catch {
+      if (current === request) {
+        failed = true;
+        results = [];
+      }
+    } finally {
+      if (current === request) loading = false;
+    }
+  }
+  function retrySearch() {
+    failed = false;
+    loading = true;
+    void loadResults(text.trim(), ++request, true);
+  }
   function shortcut(event: KeyboardEvent) {
     if (event.defaultPrevented || event.isComposing || document.querySelector('dialog[open]')) return;
     if (
@@ -106,10 +117,8 @@
 <svelte:window
   onkeydown={shortcut}
   onclick={(event) => {
-    if (
-      !(event.target instanceof Element) ||
-      !event.target.closest('.search-container')
-    )
+    if (!event.composedPath().some((node) =>
+      node instanceof Element && node.classList.contains('search-container')))
       open = false;
   }}
 />
@@ -118,6 +127,7 @@
     class="search-form"
     action="/search"
     role="search"
+    aria-busy={submitting}
     onsubmit={() => (open = false)}
   >
     <Icon name="search" size={large ? 23 : 17} />
@@ -137,18 +147,21 @@
       placeholder={large ? 'Search Go packages…' : 'Search packages…'}
       aria-controls={large ? 'hero-results' : 'header-results'}
     />
-    {#if large}<button class="search-submit" type="submit"
-        >Search <Icon name="arrow" size={16} /></button
+    {#if large}<button class="search-submit" type="submit" disabled={submitting}
+        >{#if submitting}<span class="loading-spinner" aria-hidden="true"></span>Searching…{:else}Search <Icon name="arrow" size={16} />{/if}</button
       >{:else}<button type="button" class="search-shortcut" onclick={oncommand ?? focusSearch} aria-label="Open search and commands" title={`Search and commands (${shortcutLabel})`}><kbd>{shortcutLabel}</kbd></button>{/if}
   </form>
   {#if open && text.trim()}
     <div class="search-results" id={large ? 'hero-results' : 'header-results'}>
-      <div class="search-caption">
+      <div class="search-caption" role="status" aria-live="polite">
+        <span class="search-caption-label">
+        {#if loading}<span class="loading-spinner" aria-hidden="true"></span>{/if}
         {loading
           ? 'Searching…'
           : failed
             ? 'Search unavailable. Try again.'
             : 'Packages'}
+        </span>
         <span
           >{results.length
             ? selected >= 0
@@ -170,6 +183,7 @@
       {#if !loading && !failed && !results.length}<p class="search-empty">
           No packages found. Try a name or an import path.
         </p>{/if}
+      {#if failed}<button type="button" class="search-retry" onclick={retrySearch}>Try again</button>{/if}
       <a
         class="all-results"
         href="/search?q={encodeURIComponent(text)}"

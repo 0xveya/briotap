@@ -14,7 +14,6 @@
 </script>
 
 <div class="list-heading"><h2>Code</h2></div>
-<p class="tab-intro">Source files for {path}@{version}.</p>
 {#await getSourceFiles(input)}
   <p class="tab-intro" role="status">Loading source files…</p>
 {:then result}

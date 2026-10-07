@@ -1,6 +1,8 @@
 <script lang="ts">
   import Search from '$lib/components/Search.svelte';
   import HomeCatalog from '$lib/components/HomeCatalog.svelte';
+  import type { PageData } from './$types';
+  let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head>
@@ -29,28 +31,5 @@
         >{/each}
     </div>
   </section>
-  <svelte:boundary>
-    <HomeCatalog />
-    {#snippet pending()}
-      <section class="index-strip" aria-label="Loading index coverage" aria-busy="true">
-        {#each ['Packages', 'Modules', 'Versions'] as label}
-          <div><strong>—</strong><span>{label}</span></div>
-        {/each}
-        <p>Loading counts…</p>
-      </section>
-      <section class="discover" aria-busy="true" aria-label="Loading package collections">
-        <div class="section-heading">
-          <h2>Browse packages</h2><a href="/search">Search all packages →</a>
-        </div>
-        <div class="collection-grid catalog-placeholder">
-          {#each [0, 1, 2] as group}
-            <div class="skeleton"><span></span><span></span><span></span></div>
-          {/each}
-        </div>
-      </section>
-    {/snippet}
-    {#snippet failed()}
-      <div class="notice">Package collections could not be loaded. <a href="/search">Search packages →</a></div>
-    {/snippet}
-  </svelte:boundary>
+  <HomeCatalog catalog={data.catalog} />
 </div>

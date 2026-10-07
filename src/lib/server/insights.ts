@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import { cached, fetchJson, pkgUrl } from './cache';
+import { requirementsSchema } from './requirements';
 
 const versionSchema = v.object({
   licenses: v.nullish(v.array(v.string()), []),
@@ -32,15 +33,6 @@ const versionsSchema = v.object({
       version: v.string(),
       commitTime: v.optional(v.string()),
       retracted: v.optional(v.boolean(), false)
-    })
-  )
-});
-const requirement = v.object({ name: v.string(), requirement: v.string() });
-const requirementsSchema = v.object({
-  go: v.optional(
-    v.object({
-      directDependencies: v.nullish(v.array(requirement), []),
-      indirectDependencies: v.nullish(v.array(requirement), [])
     })
   )
 });
@@ -104,7 +96,7 @@ export async function insights(
         )
       )
     : null;
-  const major = /(?:\/v|\.v)([2-9]\d*)$/.exec(modulePath)?.[1];
+  const major = /(?:\/v|\.v)([1-9]\d*)$/.exec(modulePath)?.[1];
   const releases =
     versions?.items.filter((item) =>
       major

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getCatalog } from '../../routes/index.remote';
+  import type { catalog as loadCatalog } from '$lib/server/catalog';
   import Icon from './Icon.svelte';
-  const catalog = await getCatalog();
+  let { catalog }: { catalog: Awaited<ReturnType<typeof loadCatalog>> } = $props();
   const count = (name: string) =>
     catalog.estimates.find((row) => row.name === name)?.count ?? 0;
   const compact = (value: number) =>
@@ -11,7 +11,7 @@
     }).format(value);
 </script>
 
-<section class="index-strip" aria-label="Index coverage">
+<section class="index-strip" aria-label="Estimated index coverage" title="Approximate package, module, and version counts">
   <div>
     <strong>{compact(count('packages'))}</strong><span>Packages</span>
   </div>
@@ -19,7 +19,7 @@
   <div>
     <strong>{compact(count('module_versions'))}</strong><span>Versions</span>
   </div>
-  <p>Approximate counts</p>
+  
 </section>
 <section class="discover" id="discover">
   <div class="section-heading">
@@ -50,11 +50,4 @@
     {/each}
   </div>
 </section>
-<div class="data-note">
-  Data from pkg.go.dev and deps.dev. {#if catalog.syncedAt}Updated {new Date(
-      catalog.syncedAt
-    ).toLocaleString('en-GB', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    })}.{/if}
-</div>
+

@@ -1,18 +1,18 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import Icon from './Icon.svelte';
-  let { open = $bindable(false), title, children }: { open: boolean; title: string; children: Snippet } = $props();
+  let { open = $bindable(false), title, children, wide = false }: { open: boolean; title: string; children: Snippet; wide?: boolean } = $props();
   let dialog = $state<HTMLDialogElement>();
   $effect(() => {
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
-      queueMicrotask(() => dialog?.querySelector<HTMLInputElement>('input:not([type="checkbox"])')?.focus());
+      queueMicrotask(() => { if (wide) dialog?.querySelector<HTMLButtonElement>('.dialog-close')?.focus(); else dialog?.querySelector<HTMLInputElement>('input:not([type="checkbox"])')?.focus(); });
     }
     else if (!open && dialog.open) dialog.close();
   });
 </script>
-<dialog bind:this={dialog} class="search-dialog" aria-label={title}
+<dialog bind:this={dialog} class="search-dialog" class:wide aria-label={title}
   oncancel={(event) => { event.preventDefault(); open = false; }}
   onclose={() => (open = false)}
   onclick={(event) => { if (event.target === dialog) { const box = dialog.getBoundingClientRect(); if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) open = false; } }}>

@@ -18,12 +18,12 @@
     symbols,
     id = 'symbol-search',
     onselect,
-    sourceBase
+    sourceBase = ''
   }: {
     symbols: SymbolEntry[];
     id?: string;
-    onselect?: () => void;
-    sourceBase: string;
+    onselect?: (id: string) => void;
+    sourceBase?: string;
   } = $props();
   let filter = $state('');
   let viewport = $state<HTMLElement>();
@@ -31,7 +31,8 @@
   let signatures = $state(false);
   const indexed = $derived(indexSymbols(symbols));
   const filtered = $derived(searchSymbols(indexed, filter, kind, signatures));
-  const rowHeight = 56;
+  const hasSymbols = $derived(symbols.some((symbol) => symbol.kind !== 'section'));
+  const rowHeight = $derived(hasSymbols ? 56 : 44);
   const virtualizer = createVirtualizer<HTMLElement, HTMLAnchorElement>({
     count: 0,
     getScrollElement: () => viewport ?? null,
@@ -64,7 +65,7 @@
       event.preventDefault();
       focusResult(0);
     }
-    if (event.key === 'Enter' && event.shiftKey) {
+    if (event.key === 'Enter' && event.shiftKey && sourceBase && filtered[0]!.kind !== 'section') {
       event.preventDefault();
       window.open(
         `${sourceBase}&symbol=${encodeURIComponent(filtered[0]!.name)}`,
@@ -75,7 +76,7 @@
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      onselect?.();
+      onselect?.(filtered[0]!.id);
       void goto(`#${filtered[0]!.id}`);
     }
   }
@@ -88,7 +89,7 @@
     )
       return;
     const index = Number(event.target.dataset.index);
-    if (event.key === 'Enter' && event.shiftKey) {
+    if (event.key === 'Enter' && event.shiftKey && sourceBase && filtered[index]!.kind !== 'section') {
       event.preventDefault();
       window.open(
         `${sourceBase}&symbol=${encodeURIComponent(filtered[index]!.name)}`,
@@ -119,19 +120,19 @@
   }
 </script>
 
-<label class="sr-only" for={id}>Search symbols</label>
+<label class="sr-only" for={id}>{hasSymbols ? 'Search sections and symbols' : 'Search sections'}</label>
 <input
   {id}
   class="symbol-search"
   type="search"
-  placeholder="Search symbols"
+  placeholder={hasSymbols ? 'Search sections and symbols' : 'Search sections'}
   bind:value={filter}
   onkeydown={searchKey}
   autocomplete="off"
   spellcheck="false"
   aria-describedby={`${id}-help`}
 />
-<div class="symbol-controls">
+{#if hasSymbols}<div class="symbol-controls">
   <div class="symbol-categories" aria-label="Symbol categories">
     {#each symbolCategories as category}
       {@const count =
@@ -149,18 +150,18 @@
   <label
     ><input type="checkbox" bind:checked={signatures} /> Search signatures</label
   >
-</div>
+</div>{/if}
 <p class="symbol-help" id={`${id}-help`}>
-  ↓ to select · Enter for docs · Shift+Enter for source
+  ↓ to select · Enter to jump{#if hasSymbols} · Shift+Enter for source{/if}
 </p>
 <p class="symbol-count" aria-live="polite">
   {filtered.length}
-  {filtered.length === 1 ? 'symbol' : 'symbols'}
+  {filtered.length === 1 ? 'match' : 'matches'}
 </p>
 {#if filtered.length}
   <nav
     class="virtual-symbols"
-    aria-label="Package symbols"
+    aria-label="Document contents"
     bind:this={viewport}
     style:height="{Math.min(filtered.length * rowHeight, 336)}px"
   >
@@ -174,6 +175,7 @@
           <div
             class="virtual-symbol"
             class:current={page.url.hash === `#${symbol.id}`}
+            style:height="{rowHeight}px"
             style:transform="translateY({row.start}px)"
           >
             <a
@@ -183,34 +185,36 @@
               aria-current={page.url.hash === `#${symbol.id}`
                 ? 'location'
                 : undefined}
-              onclick={onselect}
+              onclick={() => onselect?.(symbol.id)}
               onkeydown={navigate}
               title={symbol.signature}
               data-index={row.index}
+              style:padding-left={symbol.kind === 'section' ? `${12 + Math.max(0, (symbol.level ?? 2) - 2) * 12}px` : undefined}
             >
-              {#if kind === 'all'}<span class="symbol-kind"
+              {#if hasSymbols && kind === 'all'}<span class="symbol-kind"
                   >{symbolCategory(symbol)}</span
                 >{/if}
               <span class="symbol-detail"
+                class:section-title={symbol.kind === 'section'}
                 ><strong
                   >{#each matchedName(symbol.name, filter) as part}{#if part.matched}<mark
                         >{part.text}</mark
                       >{:else}{part.text}{/if}{/each}</strong
-                ><small>{symbol.signature}</small></span
+                >{#if symbol.signature}<small>{symbol.signature}</small>{/if}</span
               >
-            </a><a
+            </a>{#if sourceBase && symbol.kind !== 'section'}<a
               class="symbol-source"
               href="{sourceBase}&symbol={encodeURIComponent(symbol.name)}"
               target="_blank"
               rel="noreferrer"
               aria-label="Source for {symbol.name}"
               title="Source for {symbol.name}"><Icon name="file-code" size={18} /></a
-            >
+            >{/if}
           </div>{/if}
       {/each}
     </div>
   </nav>
-{:else}<p class="sidebar-note">No matching symbols.</p>
+{:else}<p class="sidebar-note">No matching sections or symbols.</p>
   <button
     class="symbol-reset"
     onclick={() => {

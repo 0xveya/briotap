@@ -51,7 +51,7 @@ run = 'bun test scripts/lib/worker-store.test.ts scripts/lib/jsonl.test.ts'
 run = 'bun test src/lib/server/request-budget.test.ts'
 
 [tasks."test:server"]
-run = 'bun test src/lib/server/admission.test.ts src/lib/server/cache.test.ts src/lib/server/response.test.ts src/lib/server/source.test.ts'
+run = 'bun test src/lib/server/admission.test.ts src/lib/server/cache.test.ts src/lib/server/response.test.ts src/lib/server/source.test.ts src/lib/server/documentation-links.test.ts src/lib/document-contents.test.ts src/lib/server/readme.test.ts'
 
 [tasks."stack:build"]
 run = 'docker-compose build'

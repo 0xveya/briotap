@@ -1,7 +1,17 @@
 <script lang="ts">
   import type { PageData } from './$types';
   import Icon from '$lib/components/Icon.svelte';
+  import { invalidateAll } from '$app/navigation';
+  import { navigating } from '$app/state';
   let { data }: { data: PageData } = $props();
+  let retrying = $state(false);
+  const loading = $derived(retrying || navigating.to?.url.pathname === '/search');
+  async function retry() {
+    retrying = true;
+    try { await invalidateAll(); }
+    catch (error) { console.error('Search retry failed', error); }
+    finally { retrying = false; }
+  }
 </script>
 
 <svelte:head
@@ -9,9 +19,16 @@
     >{data.q ? `${data.q} · Search` : 'Explore Go packages'} · briotap</title
   ></svelte:head
 >
-<div class="wrap search-page">
+<div class="wrap search-page" aria-busy={loading}>
   <h1>{data.q ? `Results for “${data.q}”` : 'Search packages'}</h1>
-  {#if data.q}<div class="results-meta">
+  {#if data.failure}
+    <div class="notice" role="alert">
+      <p>{data.failure}</p>
+      <button type="button" class="text-link" disabled={loading} onclick={retry}>
+        {retrying ? 'Searching…' : 'Try again'}
+      </button>
+    </div>
+  {:else if data.q}<div class="results-meta">
       <span
         >{data.results.length}{data.results.length === 20 ? '+' : ''} matches</span
       >

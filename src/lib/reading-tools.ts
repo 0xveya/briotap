@@ -24,7 +24,7 @@ export function readingTools(
   }
   function mount() {
     for (const heading of node.querySelectorAll<HTMLElement>(
-      'h2[id], h3[id], h4[id]'
+      'h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'
     )) {
       const name = heading.textContent;
       const link = document.createElement('a');
@@ -34,7 +34,7 @@ export function readingTools(
       link.setAttribute('aria-label', `Link to ${name}`);
       heading.append(link);
       controls.push(link);
-      if (heading.id.startsWith('symbol-')) {
+      if (options.sourceBase && heading.id.startsWith('symbol-')) {
         const source = document.createElement('a');
         source.className = 'declaration-source';
         source.href = `${options.sourceBase}&symbol=${encodeURIComponent(heading.id.slice(7))}`;

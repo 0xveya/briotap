@@ -82,9 +82,9 @@ For focused checks, use `mise run test:worker`, `mise run test:budget`, `mise ru
 
 ## Documentation reader
 
-Documentation HTML is sanitized before rendering. Code highlighting uses Shiki and Oniguruma WASM in a web worker. Large symbol lists are virtualized, and declarations are rendered incrementally. Code wrapping is enabled by default; reader preferences are saved locally.
+Main displays the module README with its headings, lists, and versioned repository links. Docs displays the package API documentation. Markdown and documentation HTML are sanitized before rendering. Code highlighting uses Shiki and Oniguruma WASM in a web worker. Large symbol lists are virtualized, and declarations are rendered incrementally. Code wrapping is enabled by default; reader preferences are saved locally.
 
-Ctrl+K or Cmd+K opens package search and commands. Alt+S toggles symbol search on documentation pages. Package tabs show their keyboard shortcuts. Documentation links back to pkg.go.dev, and each symbol links to its source.
+Ctrl+K or Cmd+K opens package search and commands. Contents or Alt+S opens a searchable table of contents on Main and Docs. It searches README headings, documentation sections, and API symbols, with links that jump to the selected entry. Package tabs show their keyboard shortcuts. Documentation links back to pkg.go.dev, and each symbol links to its source.
 
 ## Deployment and recovery
 

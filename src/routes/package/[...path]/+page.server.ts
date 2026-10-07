@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { documentationSnapshot } from '$lib/server/documentation';
 import { packageInfo } from '$lib/server/catalog';
 import type { PageServerLoad } from './$types';
 
@@ -14,6 +15,9 @@ export const load: PageServerLoad = async ({ params, url }) => {
     error(400, 'Invalid version');
   return {
     pkg: { ...pkg, version: requested ?? pkg.version },
-    latestVersion: pkg.version
+    latestVersion: pkg.version,
+    documentation: url.searchParams.get('tab') === 'docs'
+      ? await documentationSnapshot(pkg.path, requested ?? pkg.version)
+      : null
   };
 };

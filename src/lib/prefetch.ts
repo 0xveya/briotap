@@ -1,6 +1,6 @@
 import { preloadData } from '$app/navigation';
 import * as v from 'valibot';
-import { getDocumentation, getInsights, getReleases, getSourceFiles, getSourceFile } from '../routes/index.remote';
+import { getDocumentation, getReadme, getInsights, getReleases, getSourceFiles, getSourceFile } from '../routes/index.remote';
 
 const packageSchema = v.object({
   pkg: v.object({
@@ -15,6 +15,7 @@ const warmed = new Map<
   {
     expires: number;
     docs?: ReturnType<typeof getDocumentation>;
+    readme?: ReturnType<typeof getReadme>;
     insights?: ReturnType<typeof getInsights>;
     releases?: ReturnType<typeof getReleases>;
     files?: ReturnType<typeof getSourceFiles>;
@@ -49,6 +50,7 @@ export async function prefetchLink(href: string): Promise<void> {
   const entry: {
     expires: number;
     docs?: ReturnType<typeof getDocumentation>;
+    readme?: ReturnType<typeof getReadme>;
     insights?: ReturnType<typeof getInsights>;
     releases?: ReturnType<typeof getReleases>;
     files?: ReturnType<typeof getSourceFiles>;
@@ -85,7 +87,10 @@ export async function prefetchLink(href: string): Promise<void> {
         entry.file = getSourceFile({ ...input, name: file.name });
         queries.push(entry.file);
       }
-    } else if (['overview', 'docs', 'dependencies'].includes(tab)) {
+    } else if (tab === 'overview') {
+      entry.readme = getReadme({ modulePath: pkg.modulePath, version: pkg.version });
+      queries.push(entry.readme);
+    } else if (['docs', 'dependencies'].includes(tab)) {
       entry.docs = getDocumentation({ path: pkg.path, version: pkg.version });
       queries.push(entry.docs);
     }

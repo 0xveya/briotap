@@ -7,7 +7,7 @@ let worker: Worker | null = null;
 let nextId = 0;
 const waiting = new Map<number, (html: string | null) => void>();
 
-function highlight(code: string): {
+function highlight(code: string, language: string): {
   result: Promise<string | null>;
   cancel: () => void;
 } {
@@ -28,7 +28,7 @@ function highlight(code: string): {
     };
   }
   const id = ++nextId;
-  const request: HighlightRequest = { id, code };
+  const request: HighlightRequest = { id, code, language };
   const result = new Promise<string | null>((resolve) =>
     waiting.set(id, resolve)
   );
@@ -42,11 +42,12 @@ function highlight(code: string): {
   };
 }
 
-type HighlightOptions = string | { html: string; maxLength: number };
+type HighlightOptions = string | { html: string; maxLength: number; language?: string };
 
 /** Highlight only snippets near the viewport; retain plain code on failure. */
 export function highlightSnippets(node: HTMLElement, options: HighlightOptions) {
   let maxLength = typeof options === 'string' ? 30_000 : Math.min(options.maxLength, 200_000);
+  let language = typeof options === 'string' ? 'go' : (options.language ?? 'go');
   let active = true;
   const cancellations: (() => void)[] = [];
   const observer = new IntersectionObserver(
@@ -58,7 +59,8 @@ export function highlightSnippets(node: HTMLElement, options: HighlightOptions) 
         observer.unobserve(pre);
         const code = pre.textContent ?? '';
         if (code.length > maxLength) continue;
-        const task = highlight(code);
+        const declaredLanguage = pre.querySelector('code')?.className.match(/(?:^|\s)language-([^\s]+)/)?.[1];
+        const task = highlight(code, declaredLanguage ?? language);
         cancellations.push(task.cancel);
         void task.result.then((html) => {
           if (!active || !html || !pre.isConnected) return;
@@ -78,6 +80,7 @@ export function highlightSnippets(node: HTMLElement, options: HighlightOptions) 
   return {
     update(options: HighlightOptions) {
       maxLength = typeof options === 'string' ? 30_000 : Math.min(options.maxLength, 200_000);
+      language = typeof options === 'string' ? 'go' : (options.language ?? 'go');
       for (const cancel of cancellations) cancel();
       cancellations.length = 0;
       observer.disconnect();

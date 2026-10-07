@@ -3,11 +3,13 @@ export type SymbolEntry = {
   name: string;
   kind: string;
   signature: string;
+  level?: number;
 };
 export type SymbolKind =
-  'all' | 'error' | 'func' | 'method' | 'type' | 'const' | 'var';
+  'all' | 'section' | 'error' | 'func' | 'method' | 'type' | 'const' | 'var';
 export const symbolCategories: { kind: SymbolKind; label: string }[] = [
   { kind: 'all', label: 'All' },
+  { kind: 'section', label: 'Sections' },
   { kind: 'error', label: 'Errors' },
   { kind: 'type', label: 'Types' },
   { kind: 'func', label: 'Functions' },
@@ -18,6 +20,7 @@ export const symbolCategories: { kind: SymbolKind; label: string }[] = [
 
 /** Recognize Go error naming conventions without guessing from comments. */
 export function symbolCategory(symbol: SymbolEntry): SymbolKind {
+  if (symbol.kind === 'section') return 'section';
   if (
     ['var', 'const', 'type'].includes(symbol.kind) &&
     /^(?:Err[A-Z_])|Error$/.test(symbol.name)
@@ -60,7 +63,7 @@ export function searchSymbols(
   kind: SymbolKind,
   signatures: boolean
 ): SymbolEntry[] {
-  const tokens = query.toLowerCase().match(/[\w]+/g) ?? [];
+  const tokens = query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
   const nameQuery = tokens.join('.');
   return index
     .flatMap((item, order) => {
@@ -88,7 +91,7 @@ export function searchSymbols(
         a.score - b.score ||
         (!tokens.length
           ? a.category - b.category ||
-            a.symbol.name.localeCompare(b.symbol.name)
+            (a.symbol.kind === 'section' ? a.order - b.order : a.symbol.name.localeCompare(b.symbol.name))
           : a.order - b.order)
     )
     .map((item) => item.symbol);
@@ -98,7 +101,7 @@ export function matchedName(
   name: string,
   query: string
 ): { text: string; matched: boolean }[] {
-  const tokens = query.toLowerCase().match(/[\w]+/g) ?? [];
+  const tokens = query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
   const lower = name.toLowerCase();
   const parts: { text: string; matched: boolean }[] = [];
   for (let position = 0; position < name.length;) {

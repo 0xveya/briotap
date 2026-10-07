@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/state';
+  import { navigating, page } from '$app/state';
   import type { Snippet } from 'svelte';
   import { goto } from '$app/navigation';
   import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -9,6 +9,9 @@
   import { prefetchOnIntent } from '$lib/prefetch';
   import '../app.css';
   let paletteOpen = $state(false);
+  const navigationMessage = $derived(navigating.to
+    ? navigating.to.url.pathname === '/search' ? 'Searching…' : 'Loading page…'
+    : null);
   function symbols() {
     const url = new URL(page.url);
     url.searchParams.set('tab', 'docs');
@@ -45,6 +48,7 @@
           ? (page.url.searchParams.get('q') ?? '')
           : ''}
       />{:else}<span class="header-spacer"></span>{/if}
+    <div class="header-actions">
     <nav aria-label="Main navigation">
       <a class:current={page.url.pathname === '/search'} href="/search"
         >Packages</a
@@ -57,14 +61,13 @@
     <button type="button" class="mobile-search-button" aria-label="Open search and commands" onclick={() => (paletteOpen = true)}><Icon name="search" size={20} /></button>
     {#if page.url.pathname.startsWith('/package/')}<button type="button" class="header-symbol-button" aria-label="Find a symbol in this package" title="Find a symbol (Alt+S)" onclick={symbols}><Icon name="file-code" size={20} /></button>{/if}
     <ThemeToggle />
+    </div>
   </div>
 </header>
-<main id="main" use:prefetchOnIntent>{@render children()}</main>
-<footer class="site-footer">
-  <a class="footer-brand" href="/">briotap · Go packages</a>
-  <div>
-    <a href="https://pkg.go.dev" target="_blank" rel="noreferrer">pkg.go.dev</a
-    ><a href="https://deps.dev" target="_blank" rel="noreferrer">deps.dev</a
-    >
+{#if navigationMessage}
+  <div class="navigation-status" role="status" aria-live="polite">
+    <span class="loading-spinner" aria-hidden="true"></span>{navigationMessage}
   </div>
-</footer>
+{/if}
+<main id="main" use:prefetchOnIntent>{@render children()}</main>
+

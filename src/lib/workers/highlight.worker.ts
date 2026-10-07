@@ -1,6 +1,7 @@
 import { createHighlighterCore } from 'shiki/core';
 import { createOnigurumaEngine } from 'shiki/engine/oniguruma';
 import go from 'shiki/langs/go.mjs';
+import { bundledLanguages } from 'shiki/langs';
 import type { HighlightRequest, HighlightResponse } from './highlight.types';
 
 const highlighter = createHighlighterCore({
@@ -67,10 +68,19 @@ const highlighter = createHighlighterCore({
 });
 
 self.onmessage = async (event: MessageEvent<HighlightRequest>) => {
-  const { id, code } = event.data;
+  const { id, code, language } = event.data;
   try {
-    const html = (await highlighter).codeToHtml(code, {
-      lang: 'go',
+    const syntax = await highlighter;
+    const name = language.toLowerCase();
+    const loader = Object.hasOwn(bundledLanguages, name)
+      ? bundledLanguages[name as keyof typeof bundledLanguages] : undefined;
+    if (!loader) {
+      self.postMessage({ id, html: null } satisfies HighlightResponse);
+      return;
+    }
+    if (!syntax.getLoadedLanguages().includes(name)) await syntax.loadLanguage(await loader());
+    const html = syntax.codeToHtml(code, {
+      lang: name,
       themes: { dark: 'briotap-dark', light: 'briotap-light' },
       defaultColor: false
     });
