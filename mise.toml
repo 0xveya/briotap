@@ -1,6 +1,6 @@
 # personal:* tasks use Veya's SSH host, paths, and services.
 [tasks."db:up"]
-run = 'docker compose up -d --wait postgres'
+run = 'docker-compose up -d --wait postgres'
 
 [tasks."db:migrate"]
 run = 'bunx --bun prisma migrate deploy'
@@ -40,3 +40,10 @@ run = 'bun run check'
 
 [tasks.build]
 run = 'bun run build'
+
+[tools]
+bun = "latest"
+docker-cli = "latest"
+docker-compose = "latest"
+jq = "latest"
+node = "latest"

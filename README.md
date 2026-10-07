@@ -4,10 +4,11 @@ A Go package browser built with SvelteKit and PostgreSQL. Search package names a
 
 ## Development
 
-Requires Bun, mise, and Docker for the local PostgreSQL instance.
+Requires mise and a running Docker Engine for the local PostgreSQL instance. Mise manages Bun, Node, jq, Docker CLI, and Compose using their latest releases.
 
 ```sh
-bun install
+mise install
+mise exec -- bun install
 mise run db:up
 mise run db:migrate
 mise run dev
@@ -47,6 +48,8 @@ The downloader and importers resume from saved cursors. Run one downloader per o
 Collection can run independently of the web application. A worker reads module paths, fetches package metadata, and appends results to `module-enrichment.jsonl`. The app host copies that file and runs `mise run data:import` to update PostgreSQL. Collection can continue while the application host is offline; later imports resume from their saved offsets.
 
 The current development setup runs the collector on a NAS using Node and systemd. Scripts in `scripts/` and unit files in `ops/` contain Veya's SSH alias, filesystem paths, and service configuration. They are kept as working development helpers, not portable deployment defaults.
+
+The NAS helpers also use host-provided Bash, SSH, curl, rsync, and systemd. Node and jq must be available on the collector host.
 
 Shared mise tasks use `area:action` names. Machine-specific helpers use `personal:nas:*`:
 
