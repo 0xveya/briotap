@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { insights } from '$lib/server/insights';
   import SocketScore from './SocketScore.svelte';
+  import PackageBadges from './PackageBadges.svelte';
   import { repositoryMetrics } from '$lib/repository-links';
   let { details, path, repoUrl, modulePath, version }: {
     details: Awaited<ReturnType<typeof insights>>;
@@ -39,3 +40,4 @@
     {:else}<p>No advisories reported by deps.dev for this version.</p>{/each}
   </div>
 {:else}<div class="notice">Advisory data unavailable.</div>{/if}
+<PackageBadges {path} {modulePath} />

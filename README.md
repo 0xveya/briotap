@@ -2,6 +2,18 @@
 
 A Go package browser built with SvelteKit and PostgreSQL. Search package names and import paths, read documentation, find symbols, and inspect versions, imports, module requirements, and repository metadata.
 
+## README badges
+
+Open a package's Stats tab and expand **README badges** to preview and copy Markdown for its version, documentation, and Socket score. Badges follow the latest indexed version, including when the Stats page is showing an older version. Socket scores apply to the containing module. Updates may take a few minutes to appear; README hosts may cache images longer.
+
+For example:
+
+```md
+[![Go version](https://pkgs.saygex.xyz/badge/github.com/go-chi/chi/v5?type=version)](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=versions)
+[![Documentation](https://pkgs.saygex.xyz/badge/github.com/go-chi/chi/v5?type=docs)](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=docs)
+[![Socket score](https://pkgs.saygex.xyz/badge/github.com/go-chi/chi/v5?type=socket)](https://socket.dev/go/package/github.com/go-chi/chi/v5)
+```
+
 ## Development
 
 Requires mise and a running Docker Engine for the local PostgreSQL instance. Mise manages Bun, Node, jq, Docker CLI, and Compose using their latest releases.
