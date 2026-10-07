@@ -23,8 +23,6 @@
     <div class="source-file-tabs" aria-label="Source files">
       {#each result.files as file}
         <a href={fileUrl(file.name)} aria-current={file.name === selected.name ? 'page' : undefined}
-          onmouseenter={() => { void getSourceFile({ ...input, name: file.name }); }}
-          onfocus={() => { void getSourceFile({ ...input, name: file.name }); }}
           onclick={(event) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goto(fileUrl(file.name), { noScroll: true }); } }}>{file.name}</a>
       {/each}
     </div>

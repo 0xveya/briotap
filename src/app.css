@@ -2132,3 +2132,36 @@ kbd,
   .stats-grid { gap: 0 16px; }
   .stats-grid dd { font-size: 20px; overflow-wrap: anywhere; }
 }
+.search-dialog { position: fixed; inset: 0; width: min(620px, calc(100vw - 32px)); max-height: min(760px, calc(100dvh - 40px)); padding: 20px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--bg); box-shadow: 0 20px 90px var(--shadow); overflow-y: auto; }
+.search-dialog::backdrop { background: #0009; }
+.dialog-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 16px; }
+.dialog-heading h2 { margin: 0; font-size: 20px; font-weight: 500; color: var(--pink); }
+.dialog-close { display: flex; justify-content: center; align-items: center; width: 44px; height: 44px; border: 0; border-radius: 4px; color: var(--muted); }
+.dialog-close:hover { color: var(--pink); background: var(--hover); }
+.reader-symbol-trigger { display: flex; align-items: center; gap: 8px; border: 0; min-height: 44px; color: var(--text); }
+.reader-symbol-trigger:hover { color: var(--pink); }
+.reader-symbol-trigger > span { color: var(--muted); font: 12px var(--mono); }
+.reader-symbol-trigger kbd { margin-left: 4px; }
+.search-dialog .symbol-search { font-size: 16px; }
+.search-dialog .symbol-controls, .search-dialog .symbol-help { font-size: 13px; }
+.search-dialog .symbol-categories button { font-size: 14px; min-height: 44px; }
+.search-dialog .virtual-symbols { max-height: min(336px, calc(100dvh - 320px)); }
+.package-tabs a { font-size: 14px; }
+.package-tabs kbd { font-size: 11px; }
+.breadcrumbs, .repo-links, .package-path { font-size: 13px; }
+.metadata-strip > div > span { font-size: 12px; line-height: 1.6; }
+.metadata-strip strong { font-size: 14px; line-height: 1.7; }
+.metadata-strip a:hover { color: var(--pink); }
+.install-label { font-size: 12px; }
+.install-command { font-size: 14px; }
+.prose { font-size: 16px; }
+.prose h2, .prose h3, .prose h4, .doc-heading h2, .list-heading h2, .content-title, .package-sidebar .sidebar-block h2 { color: var(--pink); }
+.prose .declaration-source { width: auto; gap: 5px; padding: 0 5px; font: 12px 'DM Sans', sans-serif; color: var(--muted); }
+.source-note, .tab-intro { font-size: 12px; line-height: 1.8; }
+.original-docs { font-size: 13px; }
+@media (max-width: 480px) {
+  .search-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 14px; }
+  .reader-symbol-trigger kbd { display: none; }
+  .metadata-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .package-tabs a { font-size: 13px; }
+}

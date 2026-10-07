@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
   import type { documentation } from '$lib/server/documentation';
-  import { getDocumentation, getInsights, getSourceFiles, getReleases } from '../../index.remote';
+  import { getDocumentation, getInsights } from '../../index.remote';
   import PackageCode from '$lib/components/PackageCode.svelte';
   import PackageChangelog from '$lib/components/PackageChangelog.svelte';
   import PackageStats from '$lib/components/PackageStats.svelte';
@@ -93,13 +93,10 @@
     if (value !== 'code') url.searchParams.delete('file');
     return `${url.pathname}${url.search}`;
   }
-  function prefetchTab(value: string) {
-    if (value === 'code') void getSourceFiles({ path: pkg.path, modulePath: pkg.modulePath, version: pkg.version });
-    if (value === 'changelog' && pkg.repoUrl) void getReleases(pkg.repoUrl);
-  }
   function shortcut(event: KeyboardEvent) {
     if (
       event.defaultPrevented ||
+      document.querySelector('dialog[open]') !== null ||
       event.repeat ||
       event.isComposing ||
       (event.target instanceof HTMLElement && event.target.isContentEditable) ||
@@ -150,8 +147,6 @@
         class:active={tab === item}
         aria-current={tab === item ? 'page' : undefined}
         aria-keyshortcuts={tabBindings[item]}
-        onmouseenter={() => prefetchTab(item)}
-        onfocus={() => prefetchTab(item)}
         >{item === 'overview'
           ? 'Main'
           : item === 'docs'
@@ -214,11 +209,10 @@
               >
             </div>
             <div>
-              <span>Known advisories</span><strong
-                class:known={info.current?.metadata?.advisoryKeys.length === 0}
+              <span><a href="https://deps.dev/go/{encodeURIComponent(pkg.modulePath)}/{pkg.version}" target="_blank" rel="noreferrer" title="Advisories reported by deps.dev for this module version">Known advisories ↗</a></span><strong
                 >{info.current?.metadata
                   ? info.current.metadata.advisoryKeys.length === 0
-                    ? '✓ None reported'
+                    ? 'None reported'
                     : `${info.current.metadata.advisoryKeys.length} reported`
                   : '—'}</strong
               >
@@ -455,7 +449,7 @@
           >
         </div>
         <div class="side-stat">
-          <span>GitHub stars</span><strong
+          <span>Repository stars</span><strong
             >{formatNumber(info.current?.project?.starsCount)}</strong
           >
         </div>

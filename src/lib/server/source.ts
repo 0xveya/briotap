@@ -73,9 +73,12 @@ export async function sourceFile(path: string, modulePath: string, version: stri
   const file = (await sourceIndex(path, modulePath, version)).files.find((item) => item.name === name);
   if (!file) throw new Error('Source file not found');
   const url = new URL(file.url);
-  if (url.hostname !== 'github.com' || !url.pathname.includes('/blob/'))
-    return { name, url: file.url, code: null };
-  const raw = new URL(url.pathname.replace('/blob/', '/'), 'https://raw.githubusercontent.com');
+  const raw = url.hostname === 'github.com' && url.pathname.includes('/blob/')
+    ? new URL(url.pathname.replace('/blob/', '/'), 'https://raw.githubusercontent.com')
+    : url.hostname === 'gitlab.com' && url.pathname.includes('/-/blob/')
+      ? new URL(url.pathname.replace('/-/blob/', '/-/raw/'), url.origin)
+      : null;
+  if (!raw) return { name, url: file.url, code: null };
   const code = await cached(`source-file:v1:${raw}`, v.string(), async () => {
     const response = await fetch(raw, { signal: AbortSignal.timeout(12_000) });
     if (!response.ok) throw new Error(`Source returned ${response.status}`);

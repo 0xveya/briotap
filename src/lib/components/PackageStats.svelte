@@ -4,7 +4,7 @@
   const number = (value: number | null | undefined) => value == null ? 'Unavailable' : new Intl.NumberFormat('en').format(value);
   const metrics = $derived([
     ['Imported by', details.importedBy?.total],
-    ['GitHub stars', details.project?.starsCount],
+    ['Repository stars', details.project?.starsCount],
     ['Forks', details.project?.forksCount],
     ['Open issues', details.project?.openIssuesCount],
     ['Direct dependencies', details.requirements?.filter((item) => !item.indirect).length],

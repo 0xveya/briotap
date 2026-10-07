@@ -5,12 +5,15 @@
     saveReaderPreferences,
     type ReaderPreferences
   } from '$lib/reader-preferences';
+  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { getDocumentation } from '../../routes/index.remote';
   import type { documentation } from '$lib/server/documentation';
   import { highlightSnippets } from '$lib/highlight';
   import { readingTools } from '$lib/reading-tools';
   import { sourceBase } from '$lib/source-link';
+  import Dialog from './Dialog.svelte';
+  import Icon from './Icon.svelte';
   import SymbolIndex from './SymbolIndex.svelte';
   import { goDocsUrl } from '$lib/go-docs';
   let {
@@ -40,6 +43,13 @@
   });
   $effect(() => {
     if (preferencesReady) saveReaderPreferences({ textSize, wrapCode });
+  });
+  $effect(() => {
+    if (page.url.searchParams.get('find') !== 'symbols') return;
+    symbolsOpen = true;
+    const url = new URL(page.url);
+    url.searchParams.delete('find');
+    void goto(`${url.pathname}${url.search}${url.hash}`, { replaceState: true, noScroll: true, keepFocus: true });
   });
   let visible = $state(40);
   $effect(() => {
@@ -92,10 +102,13 @@
 <svelte:window
   onkeydown={(event) => {
     if (
-      event.key === 'f' &&
+      !event.defaultPrevented &&
+      !document.querySelector('dialog[open]') &&
+      !event.isComposing &&
+      event.key.toLowerCase() === 's' &&
+      event.altKey &&
       !event.ctrlKey &&
       !event.metaKey &&
-      !event.altKey &&
       !(
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
@@ -112,13 +125,7 @@
       symbolToggle?.focus();
     }
   }}
-  onclick={(event) => {
-    if (
-      event.target instanceof Element &&
-      !event.target.closest('.reader-symbols')
-    )
-      symbolsOpen = false;
-  }}
+
 />
 
 <div class="doc-heading" id="documentation">
@@ -141,20 +148,12 @@
   {#if result.ok}
     {#if result.data.html || result.data.sections.length > 0}
       <div class="reader-toolbar">
-        <details class="reader-symbols" bind:open={symbolsOpen}>
-          <summary bind:this={symbolToggle}
-            >Symbols <span>{result.data.symbols.length}</span>
-            <kbd>f</kbd></summary
-          >
-          <div class="reader-symbol-menu" hidden={!symbolsOpen}>
-            <SymbolIndex
-              symbols={result.data.symbols}
-              sourceBase={sourceBase(path, result.data.modulePath, version)}
-              id="reader-symbol-search"
-              onselect={() => (symbolsOpen = false)}
-            />
-          </div>
-        </details>
+        <button type="button" class="reader-symbol-trigger" bind:this={symbolToggle} onclick={() => (symbolsOpen = true)} aria-keyshortcuts="Alt+s">
+          <Icon name="search" size={16} /> Find symbol <span>{result.data.symbols.length}</span><kbd>Alt S</kbd>
+        </button>
+        <Dialog bind:open={symbolsOpen} title="Find a symbol">
+          <SymbolIndex symbols={result.data.symbols} sourceBase={sourceBase(path, result.data.modulePath, version)} id="reader-symbol-search" onselect={() => (symbolsOpen = false)} />
+        </Dialog>
         <label class="reader-size"
           ><span class="sr-only">Documentation text size</span>
           <select aria-label="Documentation text size" bind:value={textSize}>

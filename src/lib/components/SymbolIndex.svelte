@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { createVirtualizer } from '@tanstack/svelte-virtual';
   import { get } from 'svelte/store';
   import { page } from '$app/state';
@@ -203,7 +204,7 @@
               target="_blank"
               rel="noreferrer"
               aria-label="Source for {symbol.name}"
-              title="Source for {symbol.name}">↗</a
+              title="Source for {symbol.name}"><Icon name="file-code" size={18} /></a
             >
           </div>{/if}
       {/each}

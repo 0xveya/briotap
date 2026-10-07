@@ -41,7 +41,7 @@ export function readingTools(
         source.setAttribute('aria-label', `View source for ${name}`);
         source.title = `View source for ${name}`;
         source.innerHTML =
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>';
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M10 13l-2 2 2 2M14 13l2 2-2 2"/></svg><span>Source</span>';
         source.target = '_blank';
         source.rel = 'noreferrer';
         heading.append(source);

@@ -1,12 +1,13 @@
 import { preloadData } from '$app/navigation';
 import * as v from 'valibot';
-import { getDocumentation, getInsights } from '../routes/index.remote';
+import { getDocumentation, getInsights, getReleases, getSourceFiles, getSourceFile } from '../routes/index.remote';
 
 const packageSchema = v.object({
   pkg: v.object({
     path: v.string(),
     modulePath: v.string(),
-    version: v.string()
+    version: v.string(),
+    repoUrl: v.nullable(v.string())
   })
 });
 const warmed = new Map<
@@ -15,6 +16,9 @@ const warmed = new Map<
     expires: number;
     docs?: ReturnType<typeof getDocumentation>;
     insights?: ReturnType<typeof getInsights>;
+    releases?: ReturnType<typeof getReleases>;
+    files?: ReturnType<typeof getSourceFiles>;
+    file?: ReturnType<typeof getSourceFile>;
   }
 >();
 let active = 0;
@@ -46,6 +50,9 @@ export async function prefetchLink(href: string): Promise<void> {
     expires: number;
     docs?: ReturnType<typeof getDocumentation>;
     insights?: ReturnType<typeof getInsights>;
+    releases?: ReturnType<typeof getReleases>;
+    files?: ReturnType<typeof getSourceFiles>;
+    file?: ReturnType<typeof getSourceFile>;
   } = { expires: Date.now() + 30_000 };
   warmed.set(key, entry);
   active++;
@@ -62,13 +69,27 @@ export async function prefetchLink(href: string): Promise<void> {
     const parsed = v.safeParse(packageSchema, result.data);
     if (!parsed.success) return;
     const pkg = parsed.output.pkg;
-    entry.docs = getDocumentation({ path: pkg.path, version: pkg.version });
-    entry.insights = getInsights({
-      path: pkg.path,
-      modulePath: pkg.modulePath,
-      version: pkg.version
-    });
-    const results = await Promise.allSettled([entry.docs, entry.insights]);
+    const tab = url.searchParams.get('tab') ?? 'overview';
+    const input = { path: pkg.path, modulePath: pkg.modulePath, version: pkg.version };
+    entry.insights = getInsights(input);
+    const queries: PromiseLike<unknown>[] = [entry.insights];
+    if (tab === 'changelog' && pkg.repoUrl) {
+      entry.releases = getReleases(pkg.repoUrl);
+      queries.push(entry.releases);
+    } else if (tab === 'code') {
+      entry.files = getSourceFiles(input);
+      queries.push(entry.files);
+      const files = await entry.files;
+      if (files.ok && files.files.length) {
+        const file = files.files.find((item) => item.name === url.searchParams.get('file')) ?? files.files[0]!;
+        entry.file = getSourceFile({ ...input, name: file.name });
+        queries.push(entry.file);
+      }
+    } else if (['overview', 'docs', 'dependencies'].includes(tab)) {
+      entry.docs = getDocumentation({ path: pkg.path, version: pkg.version });
+      queries.push(entry.docs);
+    }
+    const results = await Promise.allSettled(queries);
     if (results.some((result) => result.status === 'rejected'))
       warmed.delete(key);
   } catch {
