@@ -107,6 +107,7 @@
       bind:this={input}
       bind:value={text}
       onfocus={() => (open = true)}
+      oninput={() => (open = true)}
       onkeydown={keydown}
       type="search"
       name="q"
