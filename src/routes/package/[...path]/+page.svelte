@@ -7,6 +7,7 @@
   import Documentation from '$lib/components/Documentation.svelte';
   import Copy from '$lib/components/Copy.svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import SymbolIndex from '$lib/components/SymbolIndex.svelte';
   let { data }: { data: PageData } = $props();
   const pkg = $derived(data.pkg);
   const tabs = [
@@ -30,12 +31,10 @@
   let documentationData = $state<Awaited<
     ReturnType<typeof documentation>
   > | null>(null);
-  let symbolFilter = $state('');
   $effect(() => {
     void pkg.path;
     void pkg.version;
     documentationData = null;
-    symbolFilter = '';
   });
   const install = $derived(`go get ${pkg.modulePath}@${pkg.version}`);
   const formatNumber = (value: number | undefined | null) =>
@@ -388,39 +387,11 @@
           class="sidebar-block doc-outline"
         >
           <h2>
-            ON THIS PAGE <span style="color:var(--muted)"
+            SYMBOLS <span style="color:var(--muted)"
               >({documentationData.symbols.length})</span
             >
           </h2>
-          <label class="sr-only" for="symbol-search">Find a symbol</label><input
-            id="symbol-search"
-            class="symbol-search"
-            type="search"
-            placeholder="Find a symbol…"
-            bind:value={symbolFilter}
-          />
-          {#if documentationData.symbols.length > 80}<p class="sidebar-note">
-              Search all {documentationData.symbols.length} symbols. Showing up to
-              80 matches.
-            </p>{/if}
-          <div class="symbol-list">
-            {#if !symbolFilter}<a href="#main">Overview</a
-              >{/if}{#each documentationData.symbols
-              .filter((symbol) => symbol.name
-                  .toLowerCase()
-                  .includes(symbolFilter.toLowerCase()))
-              .slice(0, 80) as symbol}<a
-                href="#{symbol.id}"
-                title={symbol.signature}
-                ><span class="symbol-kind"
-                  >{symbol.kind === 'func'
-                    ? 'fn'
-                    : symbol.kind === 'type'
-                      ? 'ty'
-                      : symbol.kind.slice(0, 2)}</span
-                >{symbol.name}</a
-              >{:else}<p class="sidebar-note">No matching symbols.</p>{/each}
-          </div>
+          <SymbolIndex symbols={documentationData.symbols} />
         </section>{:else}<section class="sidebar-block">
           <h2>MODULE PACKAGES</h2>
           {#each pkg.packages.slice(0, 8) as item}<a
