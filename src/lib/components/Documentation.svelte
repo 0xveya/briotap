@@ -12,12 +12,15 @@
   import { readingTools } from '$lib/reading-tools';
   import { sourceBase } from '$lib/source-link';
   import SymbolIndex from './SymbolIndex.svelte';
+  import { goDocsUrl } from '$lib/go-docs';
   let {
     path,
+    modulePath,
     version,
     onloaded
   }: {
     path: string;
+    modulePath: string;
     version: string;
     onloaded?: (data: Awaited<ReturnType<typeof documentation>>) => void;
   } = $props();
@@ -120,6 +123,12 @@
 
 <div class="doc-heading" id="documentation">
   <h2>Documentation</h2>
+  <a
+    class="original-docs"
+    href={goDocsUrl(path, modulePath, version)}
+    target="_blank"
+    rel="noreferrer">pkg.go.dev ↗</a
+  >
 </div>
 {#await doc}<div
     class="skeleton"
@@ -187,7 +196,7 @@
           ? 'This package does not publish documentation for this version.'
           : 'Documentation cannot be redistributed for this package.'}
         <a
-          href="https://pkg.go.dev/{path}@{version}"
+          href={goDocsUrl(path, modulePath, version)}
           target="_blank"
           rel="noreferrer">Open on pkg.go.dev ↗</a
         >
@@ -196,7 +205,7 @@
       <p>{result.message}</p>
       <button onclick={() => doc.refresh()}>Try again</button>
       <a
-        href="https://pkg.go.dev/{path}@{version}"
+        href={goDocsUrl(path, modulePath, version)}
         target="_blank"
         rel="noreferrer">pkg.go.dev ↗</a
       >

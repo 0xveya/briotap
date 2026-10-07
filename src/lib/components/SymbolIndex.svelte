@@ -7,6 +7,8 @@
     indexSymbols,
     searchSymbols,
     matchedName,
+    symbolCategories,
+    symbolCategory,
     type SymbolEntry,
     type SymbolKind
   } from '$lib/symbol-search';
@@ -129,19 +131,26 @@
   aria-describedby={`${id}-help`}
 />
 <div class="symbol-controls">
-  <select aria-label="Symbol kind" bind:value={kind}>
-    <option value="all">All symbols</option><option value="func"
-      >Functions</option
-    ><option value="method">Methods</option><option value="type">Types</option
-    ><option value="const">Constants</option><option value="var"
-      >Variables</option
-    >
-  </select>
-  <label><input type="checkbox" bind:checked={signatures} /> Signatures</label>
+  <div class="symbol-categories" aria-label="Symbol categories">
+    {#each symbolCategories as category}
+      {@const count =
+        category.kind === 'all'
+          ? indexed.length
+          : indexed.filter((item) => item.kind === category.kind).length}
+      {#if count}<button
+          type="button"
+          aria-pressed={kind === category.kind}
+          onclick={() => (kind = category.kind)}
+          >{category.label} <span>{count}</span></button
+        >{/if}
+    {/each}
+  </div>
+  <label
+    ><input type="checkbox" bind:checked={signatures} /> Search signatures</label
+  >
 </div>
 <p class="symbol-help" id={`${id}-help`}>
-  Name, receiver + method, or initials. ↓ to select, Enter for docs, Shift+Enter
-  for source.
+  ↓ to select · Enter for docs · Shift+Enter for source
 </p>
 <p class="symbol-count" aria-live="polite">
   {filtered.length}
@@ -178,13 +187,9 @@
               title={symbol.signature}
               data-index={row.index}
             >
-              <span class="symbol-kind"
-                >{symbol.kind === 'func'
-                  ? symbol.name.includes('.')
-                    ? 'method'
-                    : 'func'
-                  : symbol.kind}</span
-              >
+              {#if kind === 'all'}<span class="symbol-kind"
+                  >{symbolCategory(symbol)}</span
+                >{/if}
               <span class="symbol-detail"
                 ><strong
                   >{#each matchedName(symbol.name, filter) as part}{#if part.matched}<mark

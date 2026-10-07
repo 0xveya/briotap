@@ -4,7 +4,31 @@ export type SymbolEntry = {
   kind: string;
   signature: string;
 };
-export type SymbolKind = 'all' | 'func' | 'method' | 'type' | 'const' | 'var';
+export type SymbolKind =
+  'all' | 'error' | 'func' | 'method' | 'type' | 'const' | 'var';
+export const symbolCategories: { kind: SymbolKind; label: string }[] = [
+  { kind: 'all', label: 'All' },
+  { kind: 'error', label: 'Errors' },
+  { kind: 'type', label: 'Types' },
+  { kind: 'func', label: 'Functions' },
+  { kind: 'method', label: 'Methods' },
+  { kind: 'const', label: 'Constants' },
+  { kind: 'var', label: 'Variables' }
+];
+
+/** Recognize Go error naming conventions without guessing from comments. */
+export function symbolCategory(symbol: SymbolEntry): SymbolKind {
+  if (
+    ['var', 'const', 'type'].includes(symbol.kind) &&
+    /^(?:Err[A-Z_])|Error$/.test(symbol.name)
+  )
+    return 'error';
+  if (symbol.kind === 'func')
+    return symbol.name.includes('.') ? 'method' : 'func';
+  return symbol.kind === 'type' || symbol.kind === 'const'
+    ? symbol.kind
+    : 'var';
+}
 export type IndexedSymbol = {
   symbol: SymbolEntry;
   name: string;
@@ -25,10 +49,7 @@ export function indexSymbols(symbols: SymbolEntry[]): IndexedSymbol[] {
       .map((word) => word[0])
       .join('')
       .toLowerCase(),
-    kind:
-      symbol.kind === 'func' && symbol.name.includes('.')
-        ? 'method'
-        : (symbol.kind as SymbolKind)
+    kind: symbolCategory(symbol)
   }));
 }
 
@@ -57,9 +78,19 @@ export function searchSymbols(
       if (tokens.length)
         score +=
           item.name === nameQuery ? -20 : item.leaf === nameQuery ? -10 : 0;
-      return [{ symbol: item.symbol, score, order }];
+      const category = symbolCategories.findIndex(
+        (category) => category.kind === item.kind
+      );
+      return [{ symbol: item.symbol, score, order, category }];
     })
-    .sort((a, b) => a.score - b.score || a.order - b.order)
+    .sort(
+      (a, b) =>
+        a.score - b.score ||
+        (!tokens.length
+          ? a.category - b.category ||
+            a.symbol.name.localeCompare(b.symbol.name)
+          : a.order - b.order)
+    )
     .map((item) => item.symbol);
 }
 

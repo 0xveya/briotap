@@ -27,7 +27,9 @@
       : label}
   title={state === 'failed'
     ? 'Select the command and copy it manually'
-    : 'Copy'}
+    : state === 'copied'
+      ? 'Copied'
+      : label}
   ><Icon name={state === 'copied' ? 'check' : 'copy'} size={16} /><span
     class="sr-only"
     aria-live="polite"

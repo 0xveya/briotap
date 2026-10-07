@@ -12,6 +12,7 @@
       | 'package'
       | 'book'
       | 'branch'
+      | 'chevron'
       | 'check'
       | 'close';
     size?: number;
@@ -25,6 +26,7 @@
     package: 'm12 2 10 5v10l-10 5-10-5V7zM2 7l10 5 10-5M12 12v10M7 4.5l10 5',
     book: 'M12 5v16M12 5C8 2 3 3 2 4v16c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1',
     branch: 'M6 3v12a6 6 0 0 0 12 0V9M6 9h6a6 6 0 0 0 6-6',
+    chevron: 'm6 9 6 6 6-6',
     check: 'm5 12 4 4L19 6',
     close: 'm6 6 12 12M6 18 18 6'
   };

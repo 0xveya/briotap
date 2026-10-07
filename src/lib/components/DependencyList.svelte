@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Copy from './Copy.svelte';
   let {
     requirements
   }: {
@@ -22,24 +23,47 @@
     placeholder="Filter dependencies"
     bind:value={filter}
   />
-  <select aria-label="Dependency type" bind:value={scope}>
-    <option value="all">All dependencies</option>
-    <option value="direct">Direct</option>
-    <option value="indirect">Indirect</option>
-  </select>
+  <div class="dependency-scopes" aria-label="Dependency type">
+    {#each ['all', 'direct', 'indirect'] as type}<button
+        type="button"
+        aria-pressed={scope === type}
+        onclick={() => (scope = type)}
+        >{type === 'all' ? 'All' : type === 'direct' ? 'Direct' : 'Indirect'}
+        <span
+          >{type === 'all'
+            ? requirements.length
+            : requirements.filter(
+                (item) => item.indirect === (type === 'indirect')
+              ).length}</span
+        ></button
+      >{/each}
+  </div>
 </div>
 <p class="filter-count" aria-live="polite">
   {filtered.length} of {requirements.length} dependencies
 </p>
-<div class="compact-list">
-  {#each filtered as item}<a href="/search?q={encodeURIComponent(item.name)}">
-      <span
-        >{item.name}{#if item.indirect}<span class="release-label"
-            >indirect</span
-          >{/if}</span
+<div class="dependency-list">
+  {#each filtered as item}<div class="dependency-row">
+      <div class="dependency-heading">
+        <a href="/search?q={encodeURIComponent(item.name)}">{item.name}</a><span
+          >{item.indirect ? 'indirect' : 'direct'}</span
+        >
+      </div>
+      <div class="dependency-install">
+        <code>go get {item.name}@{item.requirement}</code><Copy
+          text={`go get ${item.name}@${item.requirement}`}
+          label={`Copy go get for ${item.name}`}
+        />
+      </div>
+      <a
+        class="dependency-docs"
+        href="https://pkg.go.dev/{item.name}@{encodeURIComponent(
+          item.requirement
+        )}"
+        target="_blank"
+        rel="noreferrer">pkg.go.dev ↗</a
       >
-      <small>{item.requirement}</small>
-    </a>{:else}<div class="notice">
+    </div>{:else}<div class="notice">
       {requirements.length
         ? 'No dependencies match this filter.'
         : 'No module requirements reported for this version.'}

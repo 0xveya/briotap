@@ -1935,10 +1935,73 @@ kbd,
 .snippet-frame { position: relative; margin: 22px 0; }
 .prose .snippet-frame pre { margin: 0; }
 .snippet-copy {
-  position: absolute; top: 6px; right: 6px; width: 44px; height: 44px;
+  position: absolute; top: 3px; right: 3px; width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
   border: 0; border-radius: 4px; background: #131116; color: var(--muted);
 }
 .snippet-copy:hover, .snippet-copy:focus-visible, .snippet-copy[aria-label="Copied"] { color: var(--pink); }
 .prose .declaration-source { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: 4px; text-decoration: none; color: var(--muted); vertical-align: middle; }
 .prose .declaration-source:hover { color: var(--pink); }
+
+.repository-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+.version-picker { position: relative; font: 13px var(--mono); }
+.version-picker > summary {
+  display: flex; align-items: center; gap: 16px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px;
+  background: var(--surface); cursor: pointer; list-style: none;
+}
+.version-picker > summary::-webkit-details-marker { display: none; }
+.version-picker[open] > summary { border-color: var(--pink); }
+.version-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+  width: min(340px, calc(100vw - 36px)); padding: 12px;
+  border: 1px solid #45333f; border-radius: 5px; background: #101013;
+  box-shadow: 0 12px 40px #000a;
+}
+.version-menu > input {
+  width: 100%; min-width: 0; height: 44px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 3px;
+  background: #080809; font-size: 16px; margin-bottom: 8px;
+}
+.version-choices { max-height: min(360px, 50dvh); overflow-y: auto; overscroll-behavior: contain; }
+.version-choice { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.version-choice > a { display: flex; align-items: center; flex: 1; min-width: 0; min-height: 44px; gap: 8px; padding: 8px; }
+.version-choice > a:hover, .version-choice > a[aria-current] { background: #ff83b310; color: var(--pink); }
+.version-choice > a > span { overflow-wrap: anywhere; }
+.version-choice small { font: 10px 'DM Sans', sans-serif; color: var(--muted); margin-left: auto; }
+.version-message { margin: 12px 4px 0; color: var(--muted); font: 12px 'DM Sans', sans-serif; }
+.original-docs { font-size: 12px; color: var(--muted); }
+.original-docs:hover { color: var(--pink); }
+.symbol-categories, .dependency-scopes { display: flex; flex-wrap: wrap; gap: 4px; }
+.symbol-categories { width: 100%; }
+.symbol-categories button, .dependency-scopes button {
+  border: 1px solid transparent; border-radius: 3px; min-height: 36px;
+  padding: 6px 8px; font-size: 12px; color: #c5bec9;
+}
+.symbol-categories button[aria-pressed="true"], .dependency-scopes button[aria-pressed="true"] { color: var(--pink); border-color: #634153; background: #ff83b310; }
+.symbol-categories button span, .dependency-scopes button span { color: var(--muted); font: 10px var(--mono); margin-left: 3px; }
+.symbol-help { font-size: 10px; margin: 6px 0 10px; }
+.reader-symbol-menu { max-height: calc(100dvh - 155px); overflow-y: auto; overscroll-behavior: contain; }
+.reader-symbol-menu .virtual-symbols { max-height: min(336px, max(112px, calc(100dvh - 420px))); }
+.dependency-controls { align-items: center; }
+.dependency-controls > input { font-size: 16px; }
+.dependency-row { padding: 18px 0; border-top: 1px solid var(--line); }
+.dependency-heading { display: flex; align-items: baseline; gap: 12px; }
+.dependency-heading > a { min-width: 0; flex: 1; overflow-wrap: anywhere; font: 13px/1.6 var(--mono); }
+.dependency-heading > span { color: var(--muted); font-size: 11px; }
+.dependency-install { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.dependency-install code { min-width: 0; flex: 1; font-size: 12px; color: #bbb4c0; overflow-wrap: anywhere; line-height: 1.7; user-select: all; }
+.dependency-docs { font-size: 11px; color: var(--muted); }
+.package-list-item { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.package-list-item > a { min-width: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 16px 0; }
+.package-list-item > a > div { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.install-command code { user-select: all; }
+.prose h3 { margin: 26px 0 10px; }
+.prose h3 + .snippet-frame { margin-top: 10px; }

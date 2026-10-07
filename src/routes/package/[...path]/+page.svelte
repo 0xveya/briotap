@@ -10,6 +10,9 @@
   import { sourceBase } from '$lib/source-link';
   import SymbolIndex from '$lib/components/SymbolIndex.svelte';
   import DependencyList from '$lib/components/DependencyList.svelte';
+  import VersionPicker from '$lib/components/VersionPicker.svelte';
+  import RepositoryIcon from '$lib/components/RepositoryIcon.svelte';
+  import { goDocsUrl } from '$lib/go-docs';
   let { data }: { data: PageData } = $props();
   const pkg = $derived(data.pkg);
   const tabs = [
@@ -39,7 +42,7 @@
       ? loadedDocumentation
       : null
   );
-  const install = $derived(`go get ${pkg.modulePath}@${pkg.version}`);
+  const install = $derived(`go get ${pkg.path}@${pkg.version}`);
   const formatNumber = (value: number | undefined | null) =>
     value == null ? '—' : new Intl.NumberFormat('en').format(value);
   const date = (value: string | undefined | null) =>
@@ -55,12 +58,6 @@
     url.searchParams.set('tab', value);
     url.hash = '';
     return `${url.pathname}${url.search}`;
-  }
-  function switchVersion(version: string) {
-    const url = new URL(page.url);
-    url.searchParams.set('version', version);
-    url.hash = '';
-    void goto(`${url.pathname}${url.search}`);
   }
   function shortcut(event: KeyboardEvent) {
     if (
@@ -95,20 +92,12 @@
   </div>
   <div class="package-heading">
     <h1><Icon name="package" size={31} />{pkg.name}</h1>
-    <label
-      ><span class="sr-only">Package version</span><select
-        value={pkg.version}
-        onchange={(event) => switchVersion(event.currentTarget.value)}
-        ><option value={pkg.version}
-          >{pkg.version}{pkg.version === data.latestVersion
-            ? ' · indexed'
-            : ''}</option
-        >{#each info.current?.versions?.filter((item) => item.version !== pkg.version) ?? [] as item}<option
-            value={item.version}
-            >{item.version}{item.retracted ? ' · retracted' : ''}</option
-          >{/each}</select
-      ></label
-    >
+    <VersionPicker
+      value={pkg.version}
+      path={pkg.path}
+      indexedVersion={data.latestVersion}
+      versions={info.current?.versions}
+    />
   </div>
   <div class="package-path">
     <span>{pkg.path}</span><Copy text={pkg.path} label="Copy import path" />
@@ -140,7 +129,7 @@
                 href={pkg.repoUrl}
                 target="_blank"
                 rel="noreferrer"
-                ><Icon name="branch" size={15} />{pkg.repoUrl.replace(
+                ><RepositoryIcon url={pkg.repoUrl} />{pkg.repoUrl.replace(
                   'https://',
                   ''
                 )}
@@ -154,7 +143,7 @@
                 target="_blank"
                 rel="noreferrer">Issues <Icon name="external" size={12} /></a
               >{/if}<a
-              href="https://pkg.go.dev/{pkg.path}@{pkg.version}"
+              href={goDocsUrl(pkg.path, pkg.modulePath, pkg.version)}
               target="_blank"
               rel="noreferrer">pkg.go.dev <Icon name="external" size={12} /></a
             >
@@ -214,6 +203,7 @@
         {/if}
         {#key `${pkg.path}@${pkg.version}`}<Documentation
             path={pkg.path}
+            modulePath={pkg.modulePath}
             version={pkg.version}
             onloaded={(value) => (loadedDocumentation = value)}
           />{/key}
@@ -229,14 +219,22 @@
           API.
         </p>
         <div class="compact-list">
-          {#each pkg.packages as item}<a href="/package/{item.path}"
-              ><div>
-                <strong>{item.name}</strong>
-                <p>{item.path}</p>
-                <p>{item.synopsis}</p>
-              </div>
-              <Icon name="arrow" size={16} /></a
-            >{/each}
+          {#each pkg.packages as item}<div class="package-list-item">
+              <a
+                href="/package/{item.path}?version={encodeURIComponent(
+                  pkg.version
+                )}"
+                ><div>
+                  <strong>{item.name}</strong>
+                  <p>{item.path}</p>
+                  <p>{item.synopsis}</p>
+                </div>
+                <Icon name="arrow" size={16} /></a
+              ><Copy
+                text={`go get ${item.path}@${pkg.version}`}
+                label={`Copy go get for ${item.path}`}
+              />
+            </div>{/each}
         </div>
       {:else}
         {#await info}<div
@@ -297,8 +295,7 @@
               <span>{details.requirements?.length ?? '—'} requirements</span>
             </div>
             <p class="tab-intro">
-              Declared go.mod requirements from deps.dev, including indirect and
-              test dependencies. These are separate from package imports below.
+              Requirements from go.mod, provided by deps.dev.
             </p>
             {#if details.requirements}<DependencyList
                 requirements={details.requirements}
@@ -379,7 +376,7 @@
               rel="noreferrer"
               >Source repository <Icon name="external" size={12} /></a
             >{/if}<a
-            href="https://pkg.go.dev/{pkg.path}@{pkg.version}"
+            href={goDocsUrl(pkg.path, pkg.modulePath, pkg.version)}
             target="_blank"
             rel="noreferrer"
             >Original documentation <Icon name="external" size={12} /></a
