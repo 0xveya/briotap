@@ -2,7 +2,6 @@
   import { page } from '$app/state';
   import { getDocumentation } from '../../routes/index.remote';
   import type { documentation } from '$lib/server/documentation';
-  import Icon from './Icon.svelte';
   import { highlightSnippets } from '$lib/highlight';
   let {
     path,
@@ -52,7 +51,6 @@
 
 <div class="doc-heading">
   <h2>Documentation</h2>
-  <span><Icon name="book" size={13} /> A little room to read.</span>
 </div>
 {#await doc}<div
     class="skeleton"

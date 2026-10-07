@@ -5,14 +5,14 @@
 
 <svelte:head><title>{page.status} · briotap</title></svelte:head>
 <div class="wrap search-page">
-  <div class="eyebrow">{page.status} / A SMALL DETOUR</div>
+  <p class="tab-intro">{page.status}</p>
   <h1>
     {page.status === 404
-      ? 'Not in the index. Yet.'
-      : 'Something interrupted the search.'}
+      ? 'Package not found'
+      : 'Unable to load page'}
   </h1>
   <p class="tab-intro">{page.error?.message}</p>
   <a class="text-link" href="/search"
-    >Find another package <Icon name="arrow" size={16} /></a
+    >Search packages <Icon name="arrow" size={16} /></a
   >
 </div>

@@ -184,23 +184,12 @@
           </div>
         </div>
         {#if tab === 'overview'}<div class="install-label">
-            <span>Make it part of your project</span><span class="pill"
-              >Go module</span
-            >
+            <span>Install</span>
           </div>
           <div class="install-command">
             <span>$</span><code>{install}</code><Copy text={install} />
           </div>
-          <div class="symbol-banner">
-            <Icon name="book" size={24} />
-            <div>
-              <strong>Go straight to the good stuff.</strong>
-              <p>Read the API and find exactly the symbol you need.</p>
-            </div>
-            <a href={tabUrl('docs')}
-              >Read the docs <Icon name="arrow" size={16} /></a
-            >
-          </div>{/if}
+{/if}
         {#key `${pkg.path}@${pkg.version}`}<Documentation
             path={pkg.path}
             version={pkg.version}
@@ -249,8 +238,8 @@
                     ><span
                       >{item.version}
                       {#if item.version === data.latestVersion}<span
-                          class="pill">latest</span
-                        >{/if}{#if item.retracted}<span class="pill"
+                          class="release-label">latest</span
+                        >{/if}{#if item.retracted}<span class="release-label"
                           >retracted</span
                         >{/if}</span
                     ><small>{date(item.commitTime)}</small></a
@@ -294,7 +283,7 @@
                     href="/search?q={encodeURIComponent(item.name)}"
                     ><span
                       >{item.name}
-                      {#if item.indirect}<span class="pill">indirect</span
+                      {#if item.indirect}<span class="release-label">indirect</span
                         >{/if}</span
                     ><small>{item.requirement}</small></a
                   >{:else}<div class="notice">

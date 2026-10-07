@@ -107,7 +107,7 @@
       autocomplete="off"
       spellcheck="false"
       aria-label="Search Go packages"
-      placeholder={large ? 'Find your next Go package…' : 'Search packages…'}
+      placeholder={large ? 'Search Go packages…' : 'Search packages…'}
       aria-controls={large ? 'hero-results' : 'header-results'}
     />
     {#if large}<button class="search-submit" type="submit"
@@ -121,7 +121,7 @@
           ? 'Searching the local index…'
           : failed
             ? 'Search unavailable. Try again.'
-            : 'Packages'} <span>{results.length ? '↵ to open' : ''}</span>
+            : 'Packages'} <span>{results.length ? 'Enter to open' : ''}</span>
       </div>
       {#each results as result, index}
         <a
@@ -140,7 +140,7 @@
         class="all-results"
         href="/search?q={encodeURIComponent(text)}"
         onclick={() => (open = false)}
-        >View all results <Icon name="arrow" size={15} /></a
+        >All results <Icon name="arrow" size={15} /></a
       >
     </div>
   {/if}

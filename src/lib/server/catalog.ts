@@ -22,7 +22,7 @@ export const collections = [
     ]
   },
   {
-    name: 'Tools for your toolbox',
+    name: 'CLI & logging',
     query: 'logging',
     paths: [
       'github.com/spf13/cobra',
