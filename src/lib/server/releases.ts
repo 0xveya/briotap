@@ -1,6 +1,7 @@
 import * as v from 'valibot';
 import sanitize from 'sanitize-html';
 import { cached, fetchJson } from './cache';
+import { responseText } from './response';
 
 const schema = v.array(v.object({
   tag: v.string(), name: v.string(), url: v.pipe(v.string(), v.url(), v.regex(/^https:\/\//)),
@@ -37,7 +38,7 @@ export async function releases(repoUrl: string) {
         headers: { Accept: 'application/vnd.github.html+json', 'User-Agent': 'briotap-prototype' }
       });
       if (!response.ok) throw new Error(`Release notes returned ${response.status}`);
-      return v.parse(githubSchema, await response.json()).map((item) => ({
+      return v.parse(githubSchema, JSON.parse(await responseText(response)) as unknown).map((item) => ({
         tag: item.tag_name, name: item.name || item.tag_name, url: item.html_url,
         publishedAt: item.published_at, prerelease: item.prerelease, html: item.body_html
       }));

@@ -74,7 +74,7 @@ export async function packageInfo(path: string) {
     synopsis: pkg?.synopsis ?? '',
     version: pkg?.version ?? module.version,
     modulePath: module.path,
-    repoUrl: module.repoUrl,
+    repoUrl: module.repoUrl && /^https?:\/\//i.test(module.repoUrl) ? module.repoUrl : null,
     commitTime: module.commitTime?.toISOString() ?? null,
     packages
   };

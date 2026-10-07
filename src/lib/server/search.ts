@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { collections } from './catalog';
+import { Prisma } from '../../../generated/prisma/client';
 
 export type SearchResult = {
   kind: 'package' | 'module';
@@ -11,21 +12,80 @@ export type SearchResult = {
 type Candidate = SearchResult & { score: number };
 const featured = new Set(collections.flatMap((group) => group.paths));
 const recent = new Map<string, { at: number; results: SearchResult[] }>();
+const pending = new Map<string, Promise<SearchResult[]>>();
+
+export class SearchUnavailableError extends Error {
+  constructor() { super('Search is temporarily unavailable. Try again.'); }
+}
+
+function isStatementTimeout(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2010') return false;
+  if (error.meta?.code === '57014') return true;
+  const adapter = error.meta?.driverAdapterError;
+  if (typeof adapter !== 'object' || adapter === null || !('cause' in adapter)) return false;
+  const cause = adapter.cause;
+  return typeof cause === 'object' && cause !== null && 'originalCode' in cause && cause.originalCode === '57014';
+}
+
+async function timedQuery(
+  milliseconds: number,
+  run: (tx: Prisma.TransactionClient) => Promise<Candidate[]>
+): Promise<Candidate[]> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(milliseconds)}, true)`;
+    return run(tx);
+  }, { maxWait: 500, timeout: milliseconds + 1000 });
+}
+
+async function optionalQuery(
+  milliseconds: number,
+  run: (tx: Prisma.TransactionClient) => Promise<Candidate[]>
+): Promise<{ rows: Candidate[]; timedOut: boolean }> {
+  try { return { rows: await timedQuery(milliseconds, run), timedOut: false }; }
+  catch (error) {
+    if (!isStatementTimeout(error)) throw error;
+    console.warn(`Search fallback exceeded its ${milliseconds} ms query budget`);
+    return { rows: [], timedOut: true };
+  }
+}
 
 /** Search indexed names first, then descriptions and fuzzy paths when needed. */
-export async function search(query: string): Promise<SearchResult[]> {
+export function search(query: string): Promise<SearchResult[]> {
   const q = query.trim().toLowerCase().slice(0, 200);
-  if (!q) return [];
+  if (!q) return Promise.resolve([]);
   const existing = recent.get(q);
-  if (existing && Date.now() - existing.at < 30_000) return existing.results;
+  if (existing && Date.now() - existing.at < 30_000) return Promise.resolve(existing.results);
+  const running = pending.get(q);
+  if (running) return running;
+  // Leave database connections available for package pages and the catalog.
+  if (pending.size >= 4) return Promise.reject(new SearchUnavailableError());
+  const task = lookup(q).then((results) => {
+    if (recent.size >= 200) recent.delete(recent.keys().next().value!);
+    recent.set(q, { at: Date.now(), results });
+    return results;
+  }).catch((error: unknown) => {
+    if (isStatementTimeout(error)) {
+      console.warn('Search exceeded its 2000 ms query budget');
+      throw new SearchUnavailableError();
+    }
+    throw error;
+  }).finally(() => pending.delete(q));
+  pending.set(q, task);
+  return task;
+}
+
+async function lookup(q: string): Promise<SearchResult[]> {
   const prefix = `${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-  const strict = await prisma.$queryRaw<Candidate[]>`
+  const strict = await timedQuery(2000, (tx) => tx.$queryRaw<Candidate[]>`
     (SELECT 'package'::text AS kind, path, name, synopsis, version, 1000 AS score
       FROM packages WHERE lower(path) = ${q} LIMIT 1)
     UNION ALL
     (SELECT 'package', path, name, synopsis, version, 900
       FROM packages WHERE lower(name) = ${q}
       ORDER BY (path = module_path) DESC, length(path), path LIMIT 60)
+    UNION ALL
+    (SELECT 'package', path, name, synopsis, version, 900
+      FROM packages WHERE path = ANY(${[...featured]}::text[]) AND lower(name) = ${q})
     UNION ALL
     (SELECT 'package', path, name, synopsis, version, 700
       FROM packages WHERE lower(path) LIKE ${prefix} LIMIT 40)
@@ -35,17 +95,21 @@ export async function search(query: string): Promise<SearchResult[]> {
     UNION ALL
     (SELECT 'module', path, name, ''::text, version, 650
       FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
-  `;
+  `);
   let candidates = strict;
-  if (q.length >= 3 && (strict.length < 8 || q.includes(' '))) {
-    const broad = await prisma.$queryRaw<Candidate[]>`
-      (SELECT 'package'::text AS kind, path, name, synopsis, version, 400 AS score
-        FROM packages WHERE to_tsvector('english', synopsis) @@ plainto_tsquery('english', ${q}) LIMIT 80)
-      UNION ALL
-      (SELECT 'package', path, name, synopsis, version, 200
-        FROM packages WHERE lower(name) % ${q} LIMIT 40)
-    `;
-    candidates = [...strict, ...broad];
+  const exactPath = strict.some((item) => item.path.toLowerCase() === q);
+  if (!exactPath && q.length >= 3 && (strict.length < 8 || q.includes(' '))) {
+    const descriptions = await optionalQuery(700, (tx) => tx.$queryRaw<Candidate[]>`
+      SELECT 'package'::text AS kind, path, name, synopsis, version, 400 AS score
+        FROM packages WHERE to_tsvector('english', synopsis) @@ plainto_tsquery('english', ${q}) LIMIT 80
+    `);
+    candidates = [...strict, ...descriptions.rows];
+    const fuzzy = await optionalQuery(250, (tx) => tx.$queryRaw<Candidate[]>`
+      SELECT 'package'::text AS kind, path, name, synopsis, version, 200 AS score
+        FROM packages WHERE lower(name) % ${q} LIMIT 40
+    `);
+    candidates.push(...fuzzy.rows);
+    if (!candidates.length && (descriptions.timedOut || fuzzy.timedOut)) throw new SearchUnavailableError();
   }
   candidates.sort(
     (a, b) =>
@@ -64,7 +128,5 @@ export async function search(query: string): Promise<SearchResult[]> {
     })
     .slice(0, 20)
     .map(({ score: _score, ...item }) => item);
-  if (recent.size >= 200) recent.delete(recent.keys().next().value!);
-  recent.set(q, { at: Date.now(), results });
   return results;
 }
