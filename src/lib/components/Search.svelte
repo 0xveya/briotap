@@ -5,7 +5,7 @@
   import { searchPackages } from '../../routes/index.remote';
   import type { SearchResult } from '$lib/server/search';
   import Icon from './Icon.svelte';
-  let { large = false, value = '' }: { large?: boolean; value?: string } =
+  let { large = false, value = '', oncommand }: { large?: boolean; value?: string; oncommand?: () => void } =
     $props();
   let text = $state('');
   let results = $state<SearchResult[]>([]);
@@ -55,7 +55,7 @@
     return () => clearTimeout(timer);
   });
   function shortcut(event: KeyboardEvent) {
-    if (event.defaultPrevented || event.isComposing) return;
+    if (event.defaultPrevented || event.isComposing || document.querySelector('dialog[open]')) return;
     if (
       (event.key === '/' &&
         !event.ctrlKey && !event.metaKey && !event.altKey &&
@@ -64,8 +64,7 @@
           event.target instanceof HTMLTextAreaElement ||
           event.target instanceof HTMLSelectElement ||
           (event.target instanceof HTMLElement && event.target.isContentEditable)
-        )) ||
-      ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k')
+        ))
     ) {
       event.preventDefault();
       focusSearch();
@@ -128,13 +127,13 @@
       autocomplete="off"
       spellcheck="false"
       aria-label="Search Go packages"
-      aria-keyshortcuts="Control+k Meta+k /"
+      aria-keyshortcuts="/"
       placeholder={large ? 'Search Go packages…' : 'Search packages…'}
       aria-controls={large ? 'hero-results' : 'header-results'}
     />
     {#if large}<button class="search-submit" type="submit"
         >Search <Icon name="arrow" size={16} /></button
-      >{:else}<button type="button" class="search-shortcut" onclick={focusSearch} aria-label="Focus package search" title={`Search packages (${shortcutLabel})`}><kbd>{shortcutLabel}</kbd></button>{/if}
+      >{:else}<button type="button" class="search-shortcut" onclick={oncommand ?? focusSearch} aria-label="Open search and commands" title={`Search and commands (${shortcutLabel})`}><kbd>{shortcutLabel}</kbd></button>{/if}
   </form>
   {#if open && text.trim()}
     <div class="search-results" id={large ? 'hero-results' : 'header-results'}>

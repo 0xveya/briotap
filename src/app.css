@@ -2165,3 +2165,23 @@ kbd,
   .metadata-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .package-tabs a { font-size: 13px; }
 }
+.command-input { width: 100%; min-height: 48px; padding: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--field); color: var(--text); font-size: 16px; }
+.command-hint, .command-status { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 12px 0; }
+.command-results { max-height: min(430px, calc(100dvh - 270px)); overflow-y: auto; overscroll-behavior: contain; }
+.command-results > button { width: 100%; min-height: 58px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; text-align: left; border: 0; border-bottom: 1px solid var(--line); color: var(--text); }
+.command-results > button.active, .command-results > button:hover { background: var(--hover); }
+.command-results > button.active strong { color: var(--pink); }
+.command-results > button > span { min-width: 0; }
+.command-results strong { display: block; font-size: 15px; font-weight: 500; }
+.command-results small { display: block; font: 12px/1.6 var(--mono); color: var(--muted); overflow-wrap: anywhere; margin-top: 3px; }
+.command-results kbd { flex-shrink: 0; font-size: 11px; }
+.mobile-search-button, .header-symbol-button { border: 0; min-width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 4px; }
+.mobile-search-button:hover, .header-symbol-button:hover { color: var(--pink); background: var(--hover); }
+.mobile-search-button { display: none; }
+@media (max-width: 600px) {
+  .header-inner > .search-container { display: none; }
+  .mobile-search-button { display: flex; margin-left: auto; }
+  .header-inner nav { display: none; }
+  .header-inner { gap: 4px; }
+  .wordmark { margin-right: auto; }
+}
