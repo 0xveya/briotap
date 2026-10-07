@@ -22,9 +22,24 @@ export const searchPackages = query(
   search
 );
 export const getCatalog = query(catalog);
-export const getDocumentation = query(v.object({ path, version }), async (input) => {
-  try { return { ok: true as const, data: await documentation(input.path, input.version) }; }
-  catch { return { ok: false as const, message: 'Documentation could not be loaded. Try again or open the original on pkg.go.dev.' }; }
-});
-export const getInsights = query(v.object({ path, modulePath: path, version }), (input) => insights(input.path, input.modulePath, input.version));
-
+export const getDocumentation = query(
+  v.object({ path, version }),
+  async (input) => {
+    try {
+      return {
+        ok: true as const,
+        data: await documentation(input.path, input.version)
+      };
+    } catch {
+      return {
+        ok: false as const,
+        message:
+          'Documentation could not be loaded. Try again or open the original on pkg.go.dev.'
+      };
+    }
+  }
+);
+export const getInsights = query(
+  v.object({ path, modulePath: path, version }),
+  (input) => insights(input.path, input.modulePath, input.version)
+);
