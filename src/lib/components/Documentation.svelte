@@ -3,6 +3,8 @@
   import { getDocumentation } from '../../routes/index.remote';
   import type { documentation } from '$lib/server/documentation';
   import { highlightSnippets } from '$lib/highlight';
+  import { readingTools } from '$lib/reading-tools';
+  import SymbolIndex from './SymbolIndex.svelte';
   let {
     path,
     version,
@@ -13,8 +15,18 @@
     onloaded?: (data: Awaited<ReturnType<typeof documentation>>) => void;
   } = $props();
   const doc = $derived(getDocumentation({ path, version }));
-  let filter = $state('');
+  let symbolsOpen = $state(false);
+  let symbolToggle = $state<HTMLElement>();
+  let textSize = $state('normal');
+  let wrapCode = $state(false);
   let visible = $state(40);
+  $effect(() => {
+    if (!symbolsOpen) return;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById('reader-symbol-search')?.focus()
+    );
+    return () => cancelAnimationFrame(frame);
+  });
   const start = $derived(
     doc.current?.ok
       ? Math.max(
@@ -37,19 +49,39 @@
   $effect(() => {
     if (!doc.current?.ok) return;
     onloaded?.(doc.current.data);
-    if (page.url.hash.startsWith('#symbol-')) {
+    if (page.url.hash) {
       void renderedHtml;
-      const frame = requestAnimationFrame(() =>
-        document
-          .getElementById(decodeURIComponent(window.location.hash.slice(1)))
-          ?.scrollIntoView()
-      );
+      const frame = requestAnimationFrame(() => {
+        const target = document.getElementById(
+          decodeURIComponent(window.location.hash.slice(1))
+        );
+        if (!target) return;
+        target.tabIndex = -1;
+        target.focus({ preventScroll: true });
+        target.scrollIntoView();
+      });
       return () => cancelAnimationFrame(frame);
     }
   });
 </script>
 
-<div class="doc-heading">
+<svelte:window
+  onkeydown={(event) => {
+    if (event.key === 'Escape' && symbolsOpen) {
+      symbolsOpen = false;
+      symbolToggle?.focus();
+    }
+  }}
+  onclick={(event) => {
+    if (
+      event.target instanceof Element &&
+      !event.target.closest('.reader-symbols')
+    )
+      symbolsOpen = false;
+  }}
+/>
+
+<div class="doc-heading" id="documentation">
   <h2>Documentation</h2>
 </div>
 {#await doc}<div
@@ -62,28 +94,39 @@
 {:then result}
   {#if result.ok}
     {#if result.data.html || result.data.sections.length > 0}
-      <div class="doc-filter-mobile">
-        <label class="sr-only" for="mobile-symbols">Find a symbol</label><input
-          class="symbol-search"
-          id="mobile-symbols"
-          type="search"
-          bind:value={filter}
-          placeholder="Find a symbol, e.g. NewRouter…"
-        />{#if filter}<div class="symbol-results">
-            {#each result.data.symbols
-              .filter((symbol) => symbol.name
-                  .toLowerCase()
-                  .includes(filter.toLowerCase()))
-              .slice(0, 60) as symbol}<a
-                href="#{symbol.id}"
-                onclick={() => (filter = '')}>{symbol.name}</a
-              >{:else}<span class="tab-intro">No symbols match.</span>{/each}
-          </div>{/if}
+      <div class="reader-toolbar">
+        <details class="reader-symbols" bind:open={symbolsOpen}>
+          <summary bind:this={symbolToggle}
+            >Symbols <span>{result.data.symbols.length}</span></summary
+          >
+          {#if symbolsOpen}<div class="reader-symbol-menu">
+              <SymbolIndex
+                symbols={result.data.symbols}
+                id="reader-symbol-search"
+                onselect={() => (symbolsOpen = false)}
+              />
+            </div>{/if}
+        </details>
+        <label class="reader-size"
+          ><span class="sr-only">Documentation text size</span>
+          <select aria-label="Documentation text size" bind:value={textSize}>
+            <option value="normal">Text size</option><option value="large"
+              >Large text</option
+            >
+          </select>
+        </label>
+        <label class="reader-wrap"
+          ><input type="checkbox" bind:checked={wrapCode} /> Wrap code</label
+        >
+        <a class="reader-top" href="#documentation">Top ↑</a>
       </div>
       <div
         class="prose"
+        class:large-text={textSize === 'large'}
+        class:wrap-code={wrapCode}
         data-documentation
         use:highlightSnippets={renderedHtml}
+        use:readingTools={renderedHtml}
       >
         {@html renderedHtml}
       </div>

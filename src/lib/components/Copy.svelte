@@ -1,6 +1,9 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
-  let { text }: { text: string } = $props();
+  let {
+    text,
+    label = 'Copy install command'
+  }: { text: string; label?: string } = $props();
   let state = $state<'idle' | 'copied' | 'failed'>('idle');
   async function copy() {
     try {
@@ -16,7 +19,7 @@
 <button
   class="copy-button"
   onclick={copy}
-  aria-label={state === 'copied' ? 'Copied' : 'Copy install command'}
+  aria-label={state === 'copied' ? 'Copied' : label}
   title={state === 'failed'
     ? 'Select the command and copy it manually'
     : 'Copy'}

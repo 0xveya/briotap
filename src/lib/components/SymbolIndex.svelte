@@ -1,10 +1,15 @@
 <script lang="ts">
   import { createVirtualizer } from '@tanstack/svelte-virtual';
   import { get } from 'svelte/store';
+  import { page } from '$app/state';
   import type { documentation } from '$lib/server/documentation';
 
   type Symbol = Awaited<ReturnType<typeof documentation>>['symbols'][number];
-  let { symbols }: { symbols: Symbol[] } = $props();
+  let {
+    symbols,
+    id = 'symbol-search',
+    onselect
+  }: { symbols: Symbol[]; id?: string; onselect?: () => void } = $props();
   let filter = $state('');
   let viewport = $state<HTMLElement>();
   const filtered = $derived(
@@ -55,9 +60,9 @@
   }
 </script>
 
-<label class="sr-only" for="symbol-search">Search symbols</label>
+<label class="sr-only" for={id}>Search symbols</label>
 <input
-  id="symbol-search"
+  {id}
   class="symbol-search"
   type="search"
   placeholder="Search symbols"
@@ -84,6 +89,11 @@
           <a
             href="#{symbol.id}"
             class="virtual-symbol"
+            class:current={page.url.hash === `#${symbol.id}`}
+            aria-current={page.url.hash === `#${symbol.id}`
+              ? 'location'
+              : undefined}
+            onclick={onselect}
             onkeydown={navigate}
             title={symbol.signature}
             data-index={row.index}

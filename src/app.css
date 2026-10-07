@@ -1659,3 +1659,162 @@ kbd,
 .virtual-symbol:focus-visible {
   outline-offset: -2px;
 }
+
+.reader-toolbar {
+  position: sticky;
+  top: 76px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 0;
+  background: #080809;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.doc-heading {
+  scroll-margin-top: 95px;
+}
+.reader-symbols {
+  position: relative;
+}
+.reader-symbols summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.reader-symbols summary span {
+  color: var(--muted);
+  margin-left: 5px;
+}
+.reader-symbol-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: min(360px, calc(100vw - 36px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 16px 40px #0009;
+}
+.reader-size select {
+  background: #080809;
+  border: 0;
+  padding: 6px 0;
+  font-size: 12px;
+}
+.reader-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.reader-wrap input {
+  accent-color: var(--pink);
+}
+.reader-top {
+  margin-left: auto;
+}
+.prose {
+  font-size: 16px;
+  line-height: 1.85;
+}
+.prose.large-text {
+  font-size: 18px;
+}
+.prose.wrap-code pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.prose h2,
+.prose h3,
+.prose h4 {
+  scroll-margin-top: 150px;
+}
+.prose .heading-link {
+  margin-left: 10px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.8em;
+}
+.prose .heading-link:hover {
+  color: var(--pink);
+}
+.snippet-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 22px 0 0;
+  border: 1px solid #302733;
+  border-bottom: 0;
+  background: #131116;
+  border-radius: 5px 5px 0 0;
+}
+.snippet-toolbar button {
+  border: 0;
+  padding: 8px 12px;
+  font: 11px var(--mono);
+  color: var(--muted);
+  min-height: 36px;
+}
+.prose .snippet-toolbar + pre {
+  margin-top: 0;
+  border-radius: 0 0 5px 5px;
+}
+.virtual-symbol.current {
+  color: var(--pink);
+  background: #ff83b30d;
+}
+@media (max-width: 480px) {
+  .reader-toolbar {
+    top: 62px;
+    gap: 12px;
+    font-size: 11px;
+  }
+  .reader-size select {
+    font-size: 11px;
+  }
+  .prose {
+    font-size: 15px;
+  }
+  .prose.large-text {
+    font-size: 17px;
+  }
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    scroll-margin-top: 170px;
+  }
+}
+.package-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.package-path > span {
+  min-width: 0;
+}
+.prose {
+  max-width: 80ch;
+}
+.prose pre {
+  font-size: 13px;
+}
+.package-sidebar:has(.doc-outline) {
+  display: flex;
+  flex-direction: column;
+}
+.package-sidebar .doc-outline {
+  order: -1;
+  margin-top: 0;
+  background: #080809;
+  z-index: 5;
+}
+@media (max-width: 780px) {
+  .package-sidebar:has(.doc-outline) {
+    display: grid;
+  }
+}
+@media (max-width: 480px) {
+  .prose pre {
+    font-size: 12px;
+  }
+}

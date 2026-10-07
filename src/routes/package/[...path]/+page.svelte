@@ -28,14 +28,15 @@
       version: pkg.version
     })
   );
-  let documentationData = $state<Awaited<
+  let loadedDocumentation = $state<Awaited<
     ReturnType<typeof documentation>
   > | null>(null);
-  $effect(() => {
-    void pkg.path;
-    void pkg.version;
-    documentationData = null;
-  });
+  const documentationData = $derived(
+    loadedDocumentation?.path === pkg.path &&
+      loadedDocumentation.version === pkg.version
+      ? loadedDocumentation
+      : null
+  );
   const install = $derived(`go get ${pkg.modulePath}@${pkg.version}`);
   const formatNumber = (value: number | undefined | null) =>
     value == null ? '—' : new Intl.NumberFormat('en').format(value);
@@ -98,7 +99,7 @@
         onchange={(event) => switchVersion(event.currentTarget.value)}
         ><option value={pkg.version}
           >{pkg.version}{pkg.version === data.latestVersion
-            ? ' · latest'
+            ? ' · indexed'
             : ''}</option
         >{#each info.current?.versions?.filter((item) => item.version !== pkg.version) ?? [] as item}<option
             value={item.version}
@@ -107,7 +108,9 @@
       ></label
     >
   </div>
-  <div class="package-path">{pkg.path}</div>
+  <div class="package-path">
+    <span>{pkg.path}</span><Copy text={pkg.path} label="Copy import path" />
+  </div>
   <nav class="package-tabs" aria-label="Package sections">
     {#each tabs as item}<a
         href={tabUrl(item)}
@@ -127,72 +130,90 @@
   <div class="package-body">
     <div class="package-main">
       {#if tab === 'overview' || tab === 'docs'}
-        <p class="synopsis">
-          {pkg.synopsis || `Explore the ${pkg.name} module and its packages.`}
-        </p>
-        <div class="repo-links">
-          {#if pkg.repoUrl}<a
-              href={pkg.repoUrl}
+        {#if tab === 'overview'}<p class="synopsis">
+            {pkg.synopsis || pkg.path}
+          </p>{/if}
+        {#if tab === 'overview'}<div class="repo-links">
+            {#if pkg.repoUrl}<a
+                href={pkg.repoUrl}
+                target="_blank"
+                rel="noreferrer"
+                ><Icon name="branch" size={15} />{pkg.repoUrl.replace(
+                  'https://',
+                  ''
+                )}
+                <Icon name="external" size={12} /></a
+              >{/if}<span
+              ><Icon name="star" size={14} />{formatNumber(
+                info.current?.project?.starsCount
+              )}</span
+            >{#if pkg.repoUrl?.startsWith('https://github.com/')}<a
+                href="{pkg.repoUrl}/issues"
+                target="_blank"
+                rel="noreferrer">Issues <Icon name="external" size={12} /></a
+              >{/if}<a
+              href="https://pkg.go.dev/{pkg.path}@{pkg.version}"
               target="_blank"
-              rel="noreferrer"
-              ><Icon name="branch" size={15} />{pkg.repoUrl.replace(
-                'https://',
-                ''
-              )}
-              <Icon name="external" size={12} /></a
-            >{/if}<span
-            ><Icon name="star" size={14} />{formatNumber(
-              info.current?.project?.starsCount
-            )}</span
-          ><a
-            href="https://pkg.go.dev/{pkg.path}@{pkg.version}"
-            target="_blank"
-            rel="noreferrer">pkg.go.dev <Icon name="external" size={12} /></a
-          >
-        </div>
-        <div class="metadata-strip">
-          <div>
-            <span>License</span><strong
-              >{info.current?.metadata?.licenses.join(', ') || '—'}</strong
+              rel="noreferrer">pkg.go.dev <Icon name="external" size={12} /></a
             >
           </div>
-          <div>
-            <span>Dependencies</span><strong
-              >{info.current?.requirements
-                ? info.current.requirements.filter((item) => !item.indirect)
-                    .length
-                : '—'} direct</strong
-            >
+        {/if}
+        {#if tab === 'overview'}<div class="metadata-strip">
+            <div>
+              <span>License</span><strong
+                >{#each info.current?.metadata?.licenses ?? [] as license, index}{#if index},
+                  {/if}<a
+                    href="https://spdx.org/licenses/{encodeURIComponent(
+                      license
+                    )}.html"
+                    target="_blank"
+                    rel="noreferrer">{license}</a
+                  >{:else}—{/each}</strong
+              >
+            </div>
+            <div>
+              <span>Dependencies</span><strong
+                >{info.current?.requirements
+                  ? info.current.requirements.filter((item) => !item.indirect)
+                      .length
+                  : '—'} direct</strong
+              >
+            </div>
+            <div>
+              <span>Known advisories</span><strong
+                class:known={info.current?.metadata?.advisoryKeys.length === 0}
+                >{info.current?.metadata
+                  ? info.current.metadata.advisoryKeys.length === 0
+                    ? '✓ None reported'
+                    : `${info.current.metadata.advisoryKeys.length} reported`
+                  : '—'}</strong
+              >
+            </div>
+            <div>
+              <span>Published</span><strong
+                >{date(
+                  info.current?.metadata?.publishedAt ??
+                    info.current?.versions?.find(
+                      (item) => item.version === pkg.version
+                    )?.commitTime ??
+                    (pkg.version === data.latestVersion
+                      ? pkg.commitTime
+                      : undefined)
+                )}</strong
+              >
+            </div>
           </div>
-          <div>
-            <span>Known advisories</span><strong
-              class:known={info.current?.metadata?.advisoryKeys.length === 0}
-              >{info.current?.metadata
-                ? info.current.metadata.advisoryKeys.length === 0
-                  ? '✓ None reported'
-                  : `${info.current.metadata.advisoryKeys.length} reported`
-                : '—'}</strong
-            >
-          </div>
-          <div>
-            <span>Published</span><strong
-              >{date(
-                info.current?.metadata?.publishedAt ?? pkg.commitTime
-              )}</strong
-            >
-          </div>
-        </div>
-        {#if tab === 'overview'}<div class="install-label">
+          <div class="install-label">
             <span>Install</span>
           </div>
           <div class="install-command">
             <span>$</span><code>{install}</code><Copy text={install} />
           </div>
-{/if}
+        {/if}
         {#key `${pkg.path}@${pkg.version}`}<Documentation
             path={pkg.path}
             version={pkg.version}
-            onloaded={(value) => (documentationData = value)}
+            onloaded={(value) => (loadedDocumentation = value)}
           />{/key}
       {:else if tab === 'packages'}
         <div class="list-heading">
@@ -278,17 +299,8 @@
               test dependencies. These are separate from package imports below.
             </p>
             {#if details.requirements}<div class="compact-list">
-                {#each details.requirements as item}<a
-                    href="/search?q={encodeURIComponent(item.name)}"
-                    ><span
-                      >{item.name}
-                      {#if item.indirect}<span class="release-label">indirect</span
-                        >{/if}</span
-                    ><small>{item.requirement}</small></a
-                  >{:else}<div class="notice">
-                    No module requirements reported for this version.
-                  </div>{/each}
-              </div>{:else}<div class="notice">
+              {#each details.requirements as item}<a href="/search?q={encodeURIComponent(item.name)}"><span>{item.name}{#if item.indirect}<span class="release-label">indirect</span>{/if}</span><small>{item.requirement}</small></a>{:else}<div class="notice">No module requirements reported for this version.</div>{/each}
+            </div>{:else}<div class="notice">
                 Module requirements are unavailable from deps.dev.
               </div>{/if}
             <div class="list-heading"><h2>Package imports</h2></div>
@@ -334,7 +346,7 @@
     </div>
     <aside class="package-sidebar" aria-label="Package insights">
       <section class="sidebar-block">
-        <h2>IN THE ECOSYSTEM</h2>
+        <h2>PACKAGE METRICS</h2>
         <div class="side-stat">
           <span>Imported by</span><strong
             >{formatNumber(info.current?.importedBy?.total)}</strong
