@@ -1,31 +1,66 @@
 # briotap
 
-briotap aims to be [npmx](https://npmx.dev/) for Go: a package browser with syntax-highlighted Go documentation, READMEs, source code, versions, and dependencies.
+A Go package browser for reading documentation and figuring out what a dependency brings into your project.
 
-**[Use briotap at pkgs.saygex.xyz](https://pkgs.saygex.xyz/)**
+**[Open briotap](https://pkgs.saygex.xyz/)**
+
+## About
+
+I wanted a nicer place to read Go docs, jump between symbols and source, and explore the dependencies in my projects. In particular, I wanted to follow a module that imports another module, keep digging, and check the licenses, advisories, and repository information along the way.
+
+briotap is very heavily inspired by [npmx](https://github.com/npmx-dev/npmx.dev). Much of the navigation and layout is borrowed from it, so calling this an npmx rip-off for Go is fair. It's a small personal project and a toy version of that idea, built around Go's simpler module ecosystem. The focus is documentation and dependency inspection.
+
+## Features
+
+### Documentation and source
+
+- Module READMEs with headings, lists, links, and syntax-highlighted code blocks.
+- Versioned Go API documentation with syntax-highlighted examples and declarations.
+- Searchable Contents for README headings, documentation sections, functions, types, methods, errors, and other symbols.
+- Links from declarations to source, plus a source-file browser.
+- Copy buttons on code snippets and version-specific `go get` commands.
+- Code wrapping, light and dark themes, and a layout for desktop and mobile reading.
+
+### Dependency exploration and auditing
+
+- Separate views of module requirements from `go.mod` and the packages a Go package imports.
+- An interactive dependency graph: expand a branch or a whole level, pan and zoom, find loaded modules, and trace the path to a dependency.
+- Direct and indirect requirements, with links to each module and version.
+- License and advisory details for the selected module inside the graph.
+- Known advisories from deps.dev, with links to the individual OSV reports.
+- Socket scores and OpenSSF Scorecard results linked to their original reports.
+- Repository stars, forks, open issues, and imported-by counts, with links to inspect them.
+
+The graph follows declared module requirements. It does not calculate the resolved build graph for your project.
+
+### Package browsing
+
+- Search by package name, import path, or description using a local PostgreSQL index.
+- A version picker, release notes, and a release timeline.
+- Browsable importing packages and other packages in the same module.
+- Shareable URLs for package versions, tabs, source files, and documentation anchors.
+- A command palette, keyboard shortcuts, and preloading on navigation intent.
+- Syntax highlighting runs in a WASM worker, keeping that work off the rendering thread.
+- Copyable version, documentation, and Socket badges for project READMEs.
 
 ## Using briotap
 
-Search by package name, description, or import path. Try [chi](https://pkgs.saygex.xyz/search?q=chi), [pgx](https://pkgs.saygex.xyz/search?q=pgx), or a full path such as `github.com/go-chi/chi/v5`.
+Search for a name such as [chi](https://pkgs.saygex.xyz/search?q=chi) or [pgx](https://pkgs.saygex.xyz/search?q=pgx), or paste an import path. Open a package, select a version, and copy its `go get` command.
 
-Open a package and choose a version from the version picker. Copy the `go get` command to install that version, or use the tabs to explore:
+Use **Main** for its README, **Docs** for the API, and **Code** for source files. **Contents** searches headings and symbols and jumps to the selected entry.
 
-- **Main** shows the module README with highlighted code examples.
-- **Docs** shows API documentation with syntax-highlighted Go examples and declarations. Open **Contents** to search headings and symbols and jump to them.
-- **Code** lets you browse package source files.
-- **Changelog**, **Timeline**, and **Versions** show release notes and version history.
-- **Dependencies** lists module requirements and package imports, with an expandable dependency graph. **Imported by** shows packages that use it.
-- **Stats** shows repository metrics, Socket scores, OpenSSF Scorecard results, and known advisories, with links to their reports.
+To inspect dependencies, open **Dependencies**, then **Explore dependency graph**. Expand modules to follow their requirements and select a node to inspect its path, license, and advisories. **Stats** brings together repository metrics and security reports; **Imported by** shows packages that use it.
 
-For example, open [Chi's README](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5), [API documentation](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=docs), or [dependencies](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=dependencies).
+Try [Chi's documentation](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=docs) or its [dependency view](https://pkgs.saygex.xyz/package/github.com/go-chi/chi/v5?tab=dependencies).
 
-Press **Ctrl+K** or **Cmd+K** for package search and commands. **Alt+S** opens Contents on Main and Docs. Package tabs show their keyboard shortcuts. Use **Wrap code** in the reader or the theme button in the header to adjust the view.
+| Shortcut | Action |
+| --- | --- |
+| Ctrl+K / Cmd+K | Open package search and commands |
+| Alt+S | Toggle Contents on Main and Docs |
+| m / d / . | Open Main, Docs, or Code |
+| - / t / s | Open Changelog, Timeline, or Stats |
 
-## Badges for your project
-
-On a package's **Stats** tab, expand **README badges** to preview and copy Markdown for a version, documentation, or Socket score badge. Paste it into your project's README.
-
-Badges follow the latest indexed version. Socket scores apply to the containing module. README image caches may delay updates.
+On **Stats**, expand **README badges** to preview and copy badge Markdown for your project. Badges follow the latest indexed version; Socket scores apply to the containing module. README image caches may delay updates.
 
 ## Development
 
@@ -71,3 +106,7 @@ The downloader and importers resume from saved cursors. Run one downloader per o
 ## Self-hosting
 
 See the [operations guide](docs/operations.md) for the Docker Compose stack, Cloudflare Tunnel setup, data ingestion, backups, and recovery. The `personal:nas:*` tasks use Veya's existing NAS configuration; the guide explains which paths to change for another host.
+
+## License
+
+[MIT](LICENSE).
