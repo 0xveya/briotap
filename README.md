@@ -1,6 +1,6 @@
 # briotap
 
-A Go package browser for searching packages, reading READMEs and API documentation, and exploring source code, versions, and dependencies.
+briotap aims to be [npmx](https://npmx.dev/) for Go: a package browser with syntax-highlighted Go documentation, READMEs, source code, versions, and dependencies.
 
 **[Use briotap at pkgs.saygex.xyz](https://pkgs.saygex.xyz/)**
 
@@ -11,7 +11,7 @@ Search by package name, description, or import path. Try [chi](https://pkgs.sayg
 Open a package and choose a version from the version picker. Copy the `go get` command to install that version, or use the tabs to explore:
 
 - **Main** shows the module README with highlighted code examples.
-- **Docs** shows API documentation. Open **Contents** to search headings and symbols and jump to them.
+- **Docs** shows API documentation with syntax-highlighted Go examples and declarations. Open **Contents** to search headings and symbols and jump to them.
 - **Code** lets you browse package source files.
 - **Changelog**, **Timeline**, and **Versions** show release notes and version history.
 - **Dependencies** lists module requirements and package imports, with an expandable dependency graph. **Imported by** shows packages that use it.
