@@ -1,16 +1,15 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
   import { navigating } from '$app/state';
-  import { searchPackages } from '../../routes/index.remote';
-  import type { SearchResult } from '$lib/server/search';
+  import { suggestPackages } from '../../routes/index.remote';
+  import type { Suggestion } from '$lib/server/search';
   import Icon from './Icon.svelte';
   let { large = false, value = '', oncommand }: { large?: boolean; value?: string; oncommand?: () => void } =
     $props();
   let previousValue = untrack(() => value);
   let text = $state(previousValue);
-  let results = $state<SearchResult[]>([]);
+  let results = $state<Suggestion[]>([]);
   let open = $state(false);
   let loading = $state(false);
   let failed = $state(false);
@@ -40,19 +39,19 @@
     const current = ++request;
     selected = -1;
     failed = false;
-    if (!q) {
+    if (!q || !open) {
       results = [];
       loading = false;
       return;
     }
     loading = true;
     results = [];
-    const timer = setTimeout(() => void loadResults(q, current), 140);
+    const timer = setTimeout(() => void loadResults(q, current), 60);
     return () => clearTimeout(timer);
   });
   async function loadResults(q: string, current: number, refresh = false) {
     try {
-      const resource = searchPackages(q.slice(0, 200));
+      const resource = suggestPackages(q.slice(0, 200));
       if (refresh) resource.refresh();
       const found = await resource;
       if (current === request) results = found.slice(0, 6);
@@ -99,8 +98,6 @@
           selected + (event.key === 'ArrowDown' ? 1 : -1)
         )
       );
-      if (selected >= 0 && results[selected])
-        void prefetchLink(`/package/${results[selected]!.path}`);
       input
         .closest('.search-container')
         ?.querySelectorAll<HTMLAnchorElement>('.search-results > a')
@@ -122,7 +119,7 @@
       open = false;
   }}
 />
-<div class:large class="search-container" use:prefetchOnIntent>
+<div class:large class="search-container" data-prefetch="off" data-sveltekit-preload-data="off">
   <form
     class="search-form"
     action="/search"

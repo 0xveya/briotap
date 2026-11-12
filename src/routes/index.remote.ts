@@ -1,6 +1,6 @@
 import { query } from '$app/server';
 import * as v from 'valibot';
-import { search } from '$lib/server/search';
+import { suggest } from '$lib/server/search';
 import { catalog } from '$lib/server/catalog';
 import { documentation } from '$lib/server/documentation';
 import { readme } from '$lib/server/readme';
@@ -23,9 +23,9 @@ const version = v.pipe(
   v.maxLength(150),
   v.regex(/^[a-zA-Z0-9._+\-]+$/)
 );
-export const searchPackages = query(
+export const suggestPackages = query(
   v.pipe(v.string(), v.maxLength(200)),
-  search
+  suggest
 );
 export const getCatalog = query(catalog);
 export const getSocketScore = query(

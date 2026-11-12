@@ -1,15 +1,14 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { searchPackages } from '../../routes/index.remote';
-  import type { SearchResult } from '$lib/server/search';
-  import { prefetchLink } from '$lib/prefetch';
+  import { suggestPackages } from '../../routes/index.remote';
+  import type { Suggestion } from '$lib/server/search';
   import Dialog from './Dialog.svelte';
   import Icon from './Icon.svelte';
   let { open = $bindable(false) }: { open: boolean } = $props();
   type Item = { label: string; detail: string; shortcut?: string } & ({ href: string } | { action: 'theme' });
   let query = $state('');
-  let packages = $state<SearchResult[]>([]);
+  let packages = $state<Suggestion[]>([]);
   let selected = $state(0);
   let loading = $state(false);
   let failed = $state(false);
@@ -46,18 +45,18 @@
     packages = [];
     failed = false;
     loading = false;
-    if (!open || text.length < 2) return;
+    if (!open || !text) return;
     loading = true;
     const timer = setTimeout(async () => {
       try {
-        const results = await searchPackages(text);
+        const results = await suggestPackages(text.slice(0, 200));
         if (request === generation) packages = results.slice(0, 8);
       } catch {
         if (request === generation) failed = true;
       } finally {
         if (request === generation) loading = false;
       }
-    }, 140);
+    }, 60);
     return () => clearTimeout(timer);
   });
   function choose(item: Item) {
@@ -71,8 +70,6 @@
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       selected = Math.max(0, Math.min(items.length - 1, selected + (event.key === 'ArrowDown' ? 1 : -1)));
-      const item = items[selected];
-      if (item && 'href' in item) void prefetchLink(item.href);
       document.getElementById(`command-result-${selected}`)?.scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'Enter' && items[selected]) {
       event.preventDefault();
@@ -86,11 +83,11 @@
   <p class="command-hint">↑ ↓ to select · Enter to open · Esc to close</p>
   <div class="command-results" id="command-results" role="listbox" aria-label="Commands and packages">
     {#each items as item, index}
-      <button id="command-result-{index}" type="button" role="option" aria-selected={selected === index} class:active={selected === index} onclick={() => choose(item)} onmouseenter={() => { selected = index; if ('href' in item) void prefetchLink(item.href); }}>
+      <button id="command-result-{index}" type="button" role="option" aria-selected={selected === index} class:active={selected === index} onclick={() => choose(item)} onmouseenter={() => { selected = index; }}>
         <span><strong>{item.label}</strong><small>{item.detail}</small></span>
         {#if item.shortcut}<kbd>{item.shortcut}</kbd>{:else}<Icon name="arrow" size={16} />{/if}
       </button>
     {/each}
   </div>
-  <p class="command-status" aria-live="polite">{loading ? 'Searching packages…' : failed ? 'Package search unavailable. Commands still work.' : !items.length ? 'No matching commands or packages.' : query.trim().length < 2 ? 'Type two or more characters to search packages.' : `${items.length} results`}</p>
+  <p class="command-status" aria-live="polite">{loading ? 'Searching packages…' : failed ? 'Package search unavailable. Commands still work.' : !items.length ? 'No matching commands or packages.' : !query.trim() ? 'Type to search packages.' : `${items.length} results`}</p>
 </Dialog>
