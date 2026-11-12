@@ -8,7 +8,9 @@ test('a rejected response body is retried rather than recorded as a permanent er
   let calls = 0;
   globalThis.fetch = (async () => {
     calls++;
-    if (calls === 1) return { ok: true, json: async () => { throw new Error('connection reset'); } } as unknown as Response;
+    if (calls === 1) return new Response(new ReadableStream({
+      start(controller) { controller.error(new Error('connection reset')); }
+    }));
     if (calls === 2) return Response.json({ path: 'example.com/m', version: 'v1.0.0' });
     return Response.json({ packages: { items: [] } });
   }) as unknown as typeof fetch;

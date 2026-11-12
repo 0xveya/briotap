@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { responseText } from '../../src/lib/server/response';
 
 export const indexEntrySchema = v.object({
   Path: v.pipe(v.string(), v.nonEmpty()),
@@ -21,8 +22,11 @@ export async function indexPage(cursor: IndexCursor, signal: AbortSignal) {
   url.searchParams.set('limit', '2000');
   if (cursor.timestamp) url.searchParams.set('since', cursor.timestamp);
   const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]) });
-  if (!response.ok) throw new Error(`index.golang.org returned ${response.status}`);
-  const entries = (await response.text()).split('\n').filter(Boolean)
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`index.golang.org returned ${response.status}`);
+  }
+  const entries = (await responseText(response)).split('\n').filter(Boolean)
     .map((line) => v.parse(indexEntrySchema, JSON.parse(line) as unknown));
   for (let i = 1; i < entries.length; i++) {
     if (timestampKey(entries[i].Timestamp) < timestampKey(entries[i - 1].Timestamp)) throw new Error('Index page is out of order');
