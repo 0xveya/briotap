@@ -14,6 +14,7 @@
   let loading = $state(false);
   let failed = $state(false);
   let generation = 0;
+  let pending = Promise.resolve();
   function packageUrl(tab: string, symbols = false) {
     const url = new URL(page.url);
     url.searchParams.set('tab', tab);
@@ -48,15 +49,18 @@
     loading = false;
     if (!open || !text) return;
     loading = true;
-    const timer = setTimeout(async () => {
-      try {
-        const results = await suggestPackages(text.slice(0, 200));
-        if (request === generation) packages = results.slice(0, 8);
-      } catch {
-        if (request === generation) failed = true;
-      } finally {
-        if (request === generation) loading = false;
-      }
+    const timer = setTimeout(() => {
+      pending = pending.then(async () => {
+        if (request !== generation) return;
+        try {
+          const results = await suggestPackages(text.slice(0, 200));
+          if (request === generation) packages = results.slice(0, 6);
+        } catch {
+          if (request === generation) failed = true;
+        } finally {
+          if (request === generation) loading = false;
+        }
+      });
     }, 60);
     return () => clearTimeout(timer);
   });

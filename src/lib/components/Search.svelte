@@ -17,6 +17,7 @@
   let input: HTMLInputElement;
   let selected = $state(-1);
   let request = 0;
+  let pending = Promise.resolve();
   let shortcutLabel = $state('Ctrl K');
   const submitting = $derived(navigating.to?.url.pathname === '/search' &&
     (navigating.to.url.searchParams.get('q') ?? '').trim() === text.trim());
@@ -50,20 +51,24 @@
     const timer = setTimeout(() => void loadResults(q, current), 60);
     return () => clearTimeout(timer);
   });
-  async function loadResults(q: string, current: number, refresh = false) {
-    try {
-      const resource = suggestPackages(q.slice(0, 200));
-      if (refresh) resource.refresh();
-      const found = await resource;
-      if (current === request) results = found.slice(0, 6);
-    } catch {
-      if (current === request) {
-        failed = true;
-        results = [];
+  function loadResults(q: string, current: number, refresh = false): Promise<void> {
+    pending = pending.then(async () => {
+      if (current !== request) return;
+      try {
+        const resource = suggestPackages(q.slice(0, 200));
+        if (refresh) resource.refresh();
+        const found = await resource;
+        if (current === request) results = found.slice(0, 6);
+      } catch {
+        if (current === request) {
+          failed = true;
+          results = [];
+        }
+      } finally {
+        if (current === request) loading = false;
       }
-    } finally {
-      if (current === request) loading = false;
-    }
+    });
+    return pending;
   }
   function retrySearch() {
     failed = false;
