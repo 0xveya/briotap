@@ -44,36 +44,39 @@ async function timedQuery<T>(
 /** Typing never waits for description or fuzzy searches. Prefix scans stop early. */
 export const suggest = suggestionCache<Suggestion>(async (q) => {
   const prefix = `${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+  const importPath = /[/.]/.test(q);
   try {
-    const candidates = await timedQuery(750, (tx) => tx.$queryRaw<SuggestionCandidate[]>`
-      WITH featured_packages AS MATERIALIZED (
-        SELECT path, name FROM packages WHERE path = ANY(${[...featured]}::text[])
-      )
-      (SELECT path, name, 1000 AS score
-        FROM packages WHERE lower(path) = ${q} LIMIT 1)
-      UNION ALL
-      (SELECT path, name, 900
-        FROM packages WHERE lower(name) = ${q}
-        ORDER BY (path = module_path) DESC, length(path), path LIMIT 6)
-      UNION ALL
-      (SELECT path, name, 950
-        FROM featured_packages WHERE lower(name) LIKE ${prefix})
-      UNION ALL
-      (SELECT path, name, 650
-        FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
-    `, 100);
-    // Exact names already fill most dropdowns. Do not read additional heap pages
-    // just to discard their lower-ranked matches, especially on cold NAS storage.
-    if (new Set(candidates.map((item) => item.path)).size < 6) {
-      const prefixes = await optionalQuery<SuggestionCandidate>(750, (tx) => tx.$queryRaw<SuggestionCandidate[]>`
-        (SELECT path, name, 700 AS score
-          FROM packages WHERE lower(path) LIKE ${prefix}
-          ORDER BY lower(path) USING ~<~ LIMIT 6)
+    const candidates = await timedQuery(2000, (tx) => importPath
+      ? tx.$queryRaw<SuggestionCandidate[]>`
+        (SELECT path, name, 1000 AS score
+          FROM packages WHERE lower(path) = ${q} LIMIT 1)
         UNION ALL
-        (SELECT path, name, 600
-          FROM packages WHERE lower(name) LIKE ${prefix}
-          ORDER BY lower(name) USING ~<~ LIMIT 6)
-      `, 100);
+        (SELECT path, name, 650
+          FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
+      `
+      : tx.$queryRaw<SuggestionCandidate[]>`
+        WITH featured_packages AS MATERIALIZED (
+          SELECT path, name FROM packages WHERE path = ANY(${[...featured]}::text[])
+        )
+        (SELECT path, name, 900 AS score
+          FROM packages WHERE lower(name) = ${q}
+          ORDER BY (path = module_path) DESC, length(path), path LIMIT 6)
+        UNION ALL
+        (SELECT path, name, 950
+          FROM featured_packages WHERE lower(name) LIKE ${prefix})
+      `);
+    if (new Set(candidates.map((item) => item.path)).size < 6) {
+      const prefixes = await optionalQuery<SuggestionCandidate>(2000, (tx) => importPath
+        ? tx.$queryRaw<SuggestionCandidate[]>`
+          SELECT path, name, 700 AS score
+            FROM packages WHERE lower(path) LIKE ${prefix}
+            ORDER BY lower(path) USING ~<~ LIMIT 6
+        `
+        : tx.$queryRaw<SuggestionCandidate[]>`
+          SELECT path, name, 600 AS score
+            FROM packages WHERE lower(name) LIKE ${prefix}
+            ORDER BY lower(name) USING ~<~ LIMIT 6
+        `);
       candidates.push(...prefixes.rows);
       if (!candidates.length && prefixes.timedOut) throw new SearchUnavailableError();
     }
