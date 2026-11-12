@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { prefetchLink } from '$lib/prefetch';
   import { suggestPackages } from '../../routes/index.remote';
   import type { Suggestion } from '$lib/server/search';
   import Dialog from './Dialog.svelte';
@@ -70,6 +71,8 @@
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       selected = Math.max(0, Math.min(items.length - 1, selected + (event.key === 'ArrowDown' ? 1 : -1)));
+      const item = items[selected];
+      if (item && 'href' in item) void prefetchLink(item.href);
       document.getElementById(`command-result-${selected}`)?.scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'Enter' && items[selected]) {
       event.preventDefault();
@@ -83,7 +86,7 @@
   <p class="command-hint">↑ ↓ to select · Enter to open · Esc to close</p>
   <div class="command-results" id="command-results" role="listbox" aria-label="Commands and packages">
     {#each items as item, index}
-      <button id="command-result-{index}" type="button" role="option" aria-selected={selected === index} class:active={selected === index} onclick={() => choose(item)} onmouseenter={() => { selected = index; }}>
+      <button id="command-result-{index}" type="button" role="option" aria-selected={selected === index} class:active={selected === index} onclick={() => choose(item)} onmouseenter={() => { selected = index; if ('href' in item) void prefetchLink(item.href); }}>
         <span><strong>{item.label}</strong><small>{item.detail}</small></span>
         {#if item.shortcut}<kbd>{item.shortcut}</kbd>{:else}<Icon name="arrow" size={16} />{/if}
       </button>

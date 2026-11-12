@@ -108,7 +108,7 @@ export async function prefetchLink(href: string): Promise<void> {
 export function prefetchOnIntent(node: HTMLElement) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const link = (event: Event) =>
-    event.target instanceof Element && !event.target.closest('[data-prefetch="off"]')
+    event.target instanceof Element
       ? event.target.closest<HTMLAnchorElement>('a[href]')
       : null;
   function hover(event: PointerEvent) {

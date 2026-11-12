@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
+  import { prefetchLink, prefetchOnIntent } from '$lib/prefetch';
   import { goto } from '$app/navigation';
   import { navigating } from '$app/state';
   import { suggestPackages } from '../../routes/index.remote';
@@ -98,6 +99,8 @@
           selected + (event.key === 'ArrowDown' ? 1 : -1)
         )
       );
+      if (selected >= 0 && results[selected])
+        void prefetchLink(`/package/${results[selected]!.path}`);
       input
         .closest('.search-container')
         ?.querySelectorAll<HTMLAnchorElement>('.search-results > a')
@@ -119,7 +122,7 @@
       open = false;
   }}
 />
-<div class:large class="search-container" data-prefetch="off" data-sveltekit-preload-data="off">
+<div class:large class="search-container" use:prefetchOnIntent>
   <form
     class="search-form"
     action="/search"
