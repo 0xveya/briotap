@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { retryDelay } from './retry-delay';
 import { RequestBudget, type RequestPriority } from './request-budget';
 
 const context = new AsyncLocalStorage<RequestPriority>();
@@ -23,10 +24,7 @@ export async function upstreamFetch(
   await budget.acquire(priority, signal);
   const response = await fetch(url, { ...init, signal });
   if (response.status === 429) {
-    const header = response.headers.get('retry-after');
-    const seconds = header === null ? NaN : Number(header);
-    const until = Number.isFinite(seconds) ? Date.now() + seconds * 1000 : Date.parse(header ?? '');
-    budget.cooldown(Number.isFinite(until) ? Math.max(Date.now() + 1000, until) : Date.now() + 1000);
+    budget.cooldown(Date.now() + retryDelay(response.headers.get('retry-after'), 1000));
   }
   return response;
 }

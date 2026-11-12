@@ -1,4 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
+import { retryDelay } from '../../src/lib/server/retry-delay';
 import { upstreamFetch } from '../../src/lib/server/upstream';
 
 type PackageInfo = { path: string; name: string; synopsis: string };
@@ -44,13 +45,14 @@ async function request(url: URL, signal?: AbortSignal): Promise<unknown> {
     try {
       const timeout = AbortSignal.timeout(30_000);
       const response = await upstreamFetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout }, 'background');
-      if (response.ok) return response.json() as Promise<unknown>;
+      if (response.ok) return await response.json() as unknown;
+      await response.body?.cancel();
       const message = `pkg.go.dev returned ${response.status} for ${url.pathname}`;
       if (response.status !== 429 && response.status < 500) throw new Error(message);
       lastError = new Error(message);
-      const retryAfter = Number(response.headers.get('retry-after'));
+      const delay = retryDelay(response.headers.get('retry-after'), 1000 * 2 ** attempt);
       if (attempt < 3) {
-        await setTimeout(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt, undefined, { signal });
+        await setTimeout(delay, undefined, { signal });
       }
     } catch (error) {
       signal?.throwIfAborted();
