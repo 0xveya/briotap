@@ -105,7 +105,7 @@ The downloader and importers resume from saved cursors. Run one downloader per o
 
 ## Self-hosting
 
-See the [operations guide](docs/operations.md) for the Docker Compose stack, Cloudflare Tunnel setup, data ingestion, backups, and recovery. The `personal:nas:*` tasks use Veya's existing NAS configuration; the guide explains which paths to change for another host.
+See the [operations guide](docs/operations.md) for the Docker Compose stack, Cloudflare Tunnel setup, data ingestion, backups, and recovery. The `personal:nas:deploy` and `personal:nas:status` tasks use Veya's existing NAS configuration; the guide explains which paths to change for another host.
 
 ## License
 

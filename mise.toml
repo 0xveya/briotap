@@ -14,26 +14,8 @@ run = 'bun scripts/import-index.ts'
 [tasks."data:enrich"]
 run = 'bun scripts/enrich-modules.ts'
 
-[tasks."personal:nas:seed"]
-run = 'bash scripts/seed-nas.sh'
-
-[tasks."personal:nas:prioritize"]
-run = 'bash scripts/nas-prioritize.sh'
-
-[tasks."personal:nas:pull"]
-run = 'bash scripts/pull-enrichment.sh'
-
 [tasks."data:import"]
 run = 'mkdir -p data && flock --nonblock data/enrichment-import.lock bun scripts/import-enrichment.ts'
-
-[tasks."personal:nas:sync"]
-run = 'bash scripts/sync-nas.sh'
-
-[tasks."personal:nas:worker:install"]
-run = 'bash scripts/install-nas-worker.sh'
-
-[tasks."personal:nas:worker:status"]
-run = 'ssh -o BatchMode=yes nas "node /opt/briotap/worker.mjs /srv/dev-disk-by-uuid-5aef6871-c178-4eba-a09c-22b258f91e50/briotap --status"'
 
 [tasks.worker]
 run = 'mkdir -p data && flock --nonblock data/enrichment-worker.lock bun scripts/worker.ts data'
@@ -41,14 +23,11 @@ run = 'mkdir -p data && flock --nonblock data/enrichment-worker.lock bun scripts
 [tasks."worker:status"]
 run = 'bun scripts/worker.ts data --status'
 
-[tasks."worker:build"]
-run = 'bun build scripts/worker.ts --target=node --outfile=build/worker.mjs'
-
 [tasks."test:worker"]
-run = 'bun test scripts/lib/worker-store.test.ts scripts/lib/jsonl.test.ts'
+run = 'bun test scripts/lib/worker-store.test.ts scripts/lib/jsonl.test.ts scripts/lib/enrichment.test.ts'
 
 [tasks."test:budget"]
-run = 'bun test src/lib/server/request-budget.test.ts'
+run = 'bun test src/lib/server/request-budget.test.ts src/lib/server/retry-delay.test.ts'
 
 [tasks."test:server"]
 run = 'bun test src/lib/server/admission.test.ts src/lib/server/cache.test.ts src/lib/server/response.test.ts src/lib/server/source.test.ts src/lib/server/documentation-links.test.ts src/lib/document-contents.test.ts src/lib/server/readme.test.ts'

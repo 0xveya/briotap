@@ -1,9 +1,0 @@
-[Unit]
-Description=Prepare Go module paths for NAS enrichment
-After=local-fs.target
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash /opt/briotap/seed.sh
-Restart=on-failure
-RestartSec=30s
