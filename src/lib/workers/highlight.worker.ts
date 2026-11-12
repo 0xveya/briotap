@@ -1,11 +1,16 @@
 import { createHighlighterCore } from 'shiki/core';
 import { createOnigurumaEngine } from 'shiki/engine/oniguruma';
+import wasmUrl from 'shiki/onig.wasm?url';
 import go from 'shiki/langs/go.mjs';
 import { bundledLanguages } from 'shiki/langs';
 import type { HighlightRequest, HighlightResponse } from './highlight.types';
 
 const highlighter = createHighlighterCore({
-  engine: createOnigurumaEngine(() => import('shiki/wasm')),
+  engine: createOnigurumaEngine(async () => {
+    const response = await fetch(wasmUrl);
+    if (!response.ok) throw new Error('Could not load syntax engine');
+    return response.arrayBuffer();
+  }),
   langs: [go],
   themes: [
     {
