@@ -66,7 +66,11 @@ async function request(url: URL, signal?: AbortSignal): Promise<unknown> {
 }
 
 export async function fetchEntry(path: string, signal?: AbortSignal): Promise<RecordEntry> {
+  // A module with endlessly changing page tokens must not monopolize the worker.
+  const deadline = AbortSignal.timeout(5 * 60_000);
+  signal = signal ? AbortSignal.any([signal, deadline]) : deadline;
   try {
+    signal.throwIfAborted();
     const item = record(await request(apiUrl('module', path), signal));
     const module: ModuleInfo = {
       path: requiredString(item.path, 'path'),
@@ -86,6 +90,7 @@ export async function fetchEntry(path: string, signal?: AbortSignal): Promise<Re
       const page = record(response.packages);
       if (!Array.isArray(page.items)) throw new Error(`Missing package list for ${path}`);
       for (const value of page.items) {
+        if (packages.length >= 100_000) throw new Error(`Package limit exceeded for ${path}`);
         const pkg = record(value);
         packages.push({
           path: requiredString(pkg.path, 'package path'),
