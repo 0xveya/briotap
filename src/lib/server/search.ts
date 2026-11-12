@@ -56,7 +56,7 @@ export const suggest = suggestionCache<Suggestion>(async (q) => {
         FROM packages WHERE lower(name) = ${q}
         ORDER BY (path = module_path) DESC, length(path), path LIMIT 6)
       UNION ALL
-      (SELECT path, name, 800
+      (SELECT path, name, 950
         FROM featured_packages WHERE lower(name) LIKE ${prefix})
       UNION ALL
       (SELECT path, name, 650
