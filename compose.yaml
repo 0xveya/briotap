@@ -25,7 +25,7 @@ x-budget: &budget
 
 services:
   postgres:
-    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    image: docker.io/library/postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     restart: unless-stopped
     stop_grace_period: 2m
     logging: *logging
@@ -98,7 +98,7 @@ services:
     stop_grace_period: 45s
 
   tunnel:
-    image: cloudflare/cloudflared:latest@sha256:a15a3b50b8dabd57ac2090e9484c0247dba9dfa1f0df4d298d4317f9d69eb2d5
+    image: docker.io/cloudflare/cloudflared:latest@sha256:a15a3b50b8dabd57ac2090e9484c0247dba9dfa1f0df4d298d4317f9d69eb2d5
     profiles: [public]
     restart: unless-stopped
     command: [tunnel, --no-autoupdate, run, --token-file, /run/secrets/tunnel_token]
