@@ -131,40 +131,52 @@ export function search(query: string): Promise<SearchResult[]> {
 async function lookup(q: string): Promise<SearchResult[]> {
   const prefix = `${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
   const strict = await timedQuery(2000, (tx) => tx.$queryRaw<Candidate[]>`
+    WITH featured_packages AS MATERIALIZED (
+      SELECT path, name, synopsis, version FROM packages WHERE path = ANY(${[...featured]}::text[])
+    )
     (SELECT 'package'::text AS kind, path, name, synopsis, version, 1000 AS score
       FROM packages WHERE lower(path) = ${q} LIMIT 1)
     UNION ALL
     (SELECT 'package', path, name, synopsis, version, 900
       FROM packages WHERE lower(name) = ${q}
-      ORDER BY (path = module_path) DESC, length(path), path LIMIT 60)
+      ORDER BY (path = module_path) DESC, length(path), path LIMIT 20)
     UNION ALL
     (SELECT 'package', path, name, synopsis, version, 900
-      FROM packages WHERE path = ANY(${[...featured]}::text[]) AND lower(name) = ${q})
-    UNION ALL
-    (SELECT 'package', path, name, synopsis, version, 700
-      FROM packages WHERE lower(path) LIKE ${prefix} LIMIT 40)
-    UNION ALL
-    (SELECT 'package', path, name, synopsis, version, 600
-      FROM packages WHERE lower(name) LIKE ${prefix} LIMIT 40)
+      FROM featured_packages WHERE lower(name) = ${q})
     UNION ALL
     (SELECT 'module', path, name, ''::text, version, 650
       FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
   `);
   let candidates = strict;
   const exactPath = strict.some((item) => item.path.toLowerCase() === q);
-  if (!exactPath && q.length >= 3 && (strict.length < 8 || q.includes(' '))) {
+  let prefixTimedOut = false;
+  if (!exactPath && new Set(strict.map((item) => item.path)).size < 20) {
+    const prefixes = await optionalQuery(700, (tx) => tx.$queryRaw<Candidate[]>`
+      (SELECT 'package'::text AS kind, path, name, synopsis, version, 700 AS score
+        FROM packages WHERE lower(path) LIKE ${prefix}
+        ORDER BY lower(path) USING ~<~ LIMIT 20)
+      UNION ALL
+      (SELECT 'package', path, name, synopsis, version, 600
+        FROM packages WHERE lower(name) LIKE ${prefix}
+        ORDER BY lower(name) USING ~<~ LIMIT 20)
+    `);
+    candidates.push(...prefixes.rows);
+    prefixTimedOut = prefixes.timedOut;
+  }
+  if (!exactPath && q.length >= 3 && (candidates.length < 8 || q.includes(' '))) {
     const descriptions = await optionalQuery(700, (tx) => tx.$queryRaw<Candidate[]>`
       SELECT 'package'::text AS kind, path, name, synopsis, version, 400 AS score
         FROM packages WHERE to_tsvector('english', synopsis) @@ plainto_tsquery('english', ${q}) LIMIT 80
     `);
-    candidates = [...strict, ...descriptions.rows];
+    candidates.push(...descriptions.rows);
     const fuzzy = await optionalQuery(250, (tx) => tx.$queryRaw<Candidate[]>`
       SELECT 'package'::text AS kind, path, name, synopsis, version, 200 AS score
         FROM packages WHERE lower(name) % ${q} LIMIT 40
     `);
     candidates.push(...fuzzy.rows);
-    if (!candidates.length && (descriptions.timedOut || fuzzy.timedOut)) throw new SearchUnavailableError();
+    if (!candidates.length && (prefixTimedOut || descriptions.timedOut || fuzzy.timedOut)) throw new SearchUnavailableError();
   }
+  if (!candidates.length && prefixTimedOut) throw new SearchUnavailableError();
   candidates.sort(
     (a, b) =>
       b.score +
