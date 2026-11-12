@@ -62,7 +62,10 @@ async function main(): Promise<void> {
       if (savedOutput > outputSize) throw new Error('Enrichment output is shorter than the worker checkpoint; restore the original file');
       let batch: { entry: RecordEntry; offset: number }[] = [];
       const flush = () => {
-        store.transaction(() => { for (const row of batch) store.result(row.entry, row.offset); });
+        store.transaction(() => {
+          for (const row of batch) store.result(row.entry, row.offset);
+          store.set('heartbeat', new Date().toISOString());
+        });
         batch = [];
       };
       console.log(`Recovering enrichment history from byte ${savedOutput} of ${outputSize}`);
@@ -108,6 +111,7 @@ async function main(): Promise<void> {
                   store.transaction(() => {
                     for (const entry of result.entries) store.enqueue(entry.Path, entry.Timestamp);
                     store.set('index-cursor', JSON.stringify(result.cursor));
+                    store.set('heartbeat', new Date().toISOString());
                   });
                   console.log(`Discovered ${result.entries.length} versions; index cursor ${result.cursor.timestamp}`);
                   worked = true;
@@ -151,7 +155,10 @@ async function main(): Promise<void> {
             await output.writeFile(line);
             await output.sync();
             outputSize += Buffer.byteLength(line);
-            store.transaction(() => store.result(entry, outputSize));
+            store.transaction(() => {
+              store.result(entry, outputSize);
+              store.set('heartbeat', new Date().toISOString());
+            });
             console.log('error' in entry ? `${entry.path}: retry scheduled: ${entry.error}` : `${entry.path}: ${entry.packages.length} packages`);
             processed++;
             worked = true;
