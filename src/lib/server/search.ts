@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { collections } from './catalog';
 import { Prisma } from '../../../generated/prisma/client';
+import { suggestionCache } from './suggestion-cache';
 
 export type SearchResult = {
   kind: 'package' | 'module';
@@ -9,7 +10,9 @@ export type SearchResult = {
   synopsis: string;
   version: string | null;
 };
+export type Suggestion = Pick<SearchResult, 'path' | 'name'>;
 type Candidate = SearchResult & { score: number };
+type SuggestionCandidate = Suggestion & { score: number };
 const featured = new Set(collections.flatMap((group) => group.paths));
 const recent = new Map<string, { at: number; results: SearchResult[] }>();
 const pending = new Map<string, Promise<SearchResult[]>>();
@@ -27,15 +30,55 @@ function isStatementTimeout(error: unknown): boolean {
   return typeof cause === 'object' && cause !== null && 'originalCode' in cause && cause.originalCode === '57014';
 }
 
-async function timedQuery(
+async function timedQuery<T>(
   milliseconds: number,
-  run: (tx: Prisma.TransactionClient) => Promise<Candidate[]>
-): Promise<Candidate[]> {
+  run: (tx: Prisma.TransactionClient) => Promise<T[]>,
+  maxWait = 500
+): Promise<T[]> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT set_config('statement_timeout', ${String(milliseconds)}, true)`;
     return run(tx);
-  }, { maxWait: 500, timeout: milliseconds + 1000 });
+  }, { maxWait, timeout: milliseconds + 1000 });
 }
+
+/** Typing never waits for description or fuzzy searches. Prefix scans stop early. */
+export const suggest = suggestionCache<Suggestion>(async (q) => {
+  const prefix = `${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+  try {
+    const candidates = await timedQuery(250, (tx) => tx.$queryRaw<SuggestionCandidate[]>`
+      (SELECT path, name, 1000 AS score
+        FROM packages WHERE lower(path) = ${q} LIMIT 1)
+      UNION ALL
+      (SELECT path, name, 900
+        FROM packages WHERE lower(name) = ${q}
+        ORDER BY (path = module_path) DESC, length(path), path LIMIT 6)
+      UNION ALL
+      (SELECT path, name, 800
+        FROM packages WHERE path = ANY(${[...featured]}::text[]) AND lower(name) LIKE ${prefix})
+      UNION ALL
+      (SELECT path, name, 700
+        FROM packages WHERE lower(path) LIKE ${prefix}
+        ORDER BY lower(path) USING ~<~ LIMIT 12)
+      UNION ALL
+      (SELECT path, name, 600
+        FROM packages WHERE lower(name) LIKE ${prefix}
+        ORDER BY lower(name) USING ~<~ LIMIT 12)
+      UNION ALL
+      (SELECT path, name, 650
+        FROM modules WHERE lower(path) = ${q} AND enriched_at IS NOT NULL LIMIT 1)
+    `, 100);
+    candidates.sort((a, b) => b.score - a.score || a.path.length - b.path.length || a.path.localeCompare(b.path));
+    const seen = new Set<string>();
+    return candidates.filter((item) => {
+      if (seen.has(item.path)) return false;
+      seen.add(item.path);
+      return true;
+    }).slice(0, 6).map(({ score: _score, ...item }) => item);
+  } catch (error) {
+    if (isStatementTimeout(error)) throw new SearchUnavailableError();
+    throw error;
+  }
+}, () => new SearchUnavailableError());
 
 async function optionalQuery(
   milliseconds: number,
